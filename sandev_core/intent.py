@@ -157,6 +157,18 @@ def classify_intent(
                 "matched_phrase": None, "normalized_message": normalized,
                 "game_id": game_id, "reason": "conversational_mention_is_not_an_action_order"}
 
+    # First-person plans describe intent, but do not necessarily authorize an immediate action.
+    future_or_intended_action = re.search(
+        r"\b(aku|saya|kita)\s+(mau|ingin|akan|berencana)\b|\b(nanti|besok|lain waktu)\b",
+        normalized,
+    )
+    if future_or_intended_action and any(
+        intent in scores for intent in ("tactical_attack", "tactical_defend", "heal_request")
+    ):
+        return {"status": "unknown", "intent": "unknown", "confidence": 0.0,
+                "matched_phrase": None, "normalized_message": normalized,
+                "game_id": game_id, "reason": "stated_intention_is_not_an_immediate_action_order"}
+
     # A specific defensive instruction can contain generic help wording
     # (e.g. "bantu aku berlindung"). Prefer the explicit defensive action
     # over the broad "bantu aku" help-request cue; this is not action execution.
