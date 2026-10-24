@@ -72,5 +72,55 @@ class MultiStepPlannerTests(unittest.TestCase):
         self.assertFalse(result["execution_allowed"])
 
 
+    def test_step_revalidation_accepts_same_version_and_current_target(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Lindungi Falcon lalu serang Bandit", ENTITIES,
+            context={"state_version": 17},
+        )
+        result = validate_plan_step(plan, 2, ENTITIES, current_state_version=17)
+        self.assertTrue(result["accepted"])
+        self.assertFalse(result["execution_allowed"])
+        self.assertEqual(result["proposal"]["target"]["entity_id"], "enemy-2")
+
+    def test_step_revalidation_rejects_stale_version(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        result = validate_plan_step(plan, 1, ENTITIES, current_state_version=18)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "stale_plan_state_version")
+
+    def test_step_revalidation_rejects_removed_target(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        result = validate_plan_step(
+            plan, 1, [entity for entity in ENTITIES if entity["id"] != "enemy-2"],
+            current_state_version=17,
+        )
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "target_missing_or_not_unique_in_current_snapshot")
+
+    def test_step_revalidation_requires_state_version(self):
+        from planner import validate_plan_step
+        plan = plan_player_command("Serang Bandit", ENTITIES)
+        result = validate_plan_step(plan, 1, ENTITIES, current_state_version=None)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "state_version_required_for_revalidation")
+
+    def test_step_revalidation_rejects_duplicate_target_id(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        duplicate = ENTITIES + [{"id": "enemy-2", "name": "Bandit"}]
+        result = validate_plan_step(plan, 1, duplicate, current_state_version=17)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "target_missing_or_not_unique_in_current_snapshot")
+
+
 if __name__ == "__main__":
     unittest.main()
