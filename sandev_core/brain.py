@@ -80,6 +80,7 @@ def choose_action(
     allowed_actions: Sequence[str],
     urgency_weight: float = 60.0,
     goal_weight: float = 25.0,
+    feedback_adjustments: Mapping[str, float] | None = None,
 ) -> Decision:
     """Choose a valid, feasible action intent using transparent utility scoring.
 
@@ -107,7 +108,12 @@ def choose_action(
             continue
         need_value = max((urgency.get(tag, 0.0) for tag in candidate.tags), default=0.0)
         goal_value = max((goal_scores.get(tag, 0.0) for tag in candidate.goal_tags), default=0.0)
-        score = float(candidate.base_score) + urgency_weight * need_value + goal_weight * goal_value - max(0.0, float(candidate.cost))
+        feedback = 0.0
+        if feedback_adjustments is not None:
+            raw_feedback = feedback_adjustments.get(candidate.action_id, 0.0)
+            if isinstance(raw_feedback, (int, float)) and not isinstance(raw_feedback, bool):
+                feedback = max(-20.0, min(20.0, float(raw_feedback)))
+        score = float(candidate.base_score) + urgency_weight * need_value + goal_weight * goal_value - max(0.0, float(candidate.cost)) + feedback
         reason_parts = []
         if need_value:
             best_need = max(candidate.tags, key=lambda tag: urgency.get(tag, 0.0))
@@ -119,6 +125,8 @@ def choose_action(
             reason_parts.append(f"base={candidate.base_score:.2f}")
         if candidate.cost:
             reason_parts.append(f"cost={max(0.0, candidate.cost):.2f}")
+        if feedback:
+            reason_parts.append(f"confirmed_outcome_feedback={feedback:.2f}")
         scored.append((score, candidate.action_id, candidate, ", ".join(reason_parts) or "feasible fallback"))
 
     if not scored:
