@@ -63,14 +63,30 @@ _COMPOSITIONAL_CUES: dict[str, tuple[tuple[str, ...], ...]] = {
     'banter': (('lelucon', 'humor', 'jenaka', 'konyol', 'candaan', 'lucu', 'tertawa', 'ketawa'), ('bikin', 'kasih', 'buat', 'suasana', 'bahan', 'dong', 'ringan')),
 }
 
-def _compositional_intent(normalized: str) -> str | None:
-    """Require evidence from two separate cue families; otherwise abstain."""
+def _compositional_candidates(normalized: str) -> list[str]:
+    """Find intents supported by two cue families, allowing common suffixes."""
     tokens = set(normalized.split())
     candidates: list[str] = []
     for intent, groups in _COMPOSITIONAL_CUES.items():
-        matched_groups = sum(1 for group in groups if any((cue in normalized if ' ' in cue else cue in tokens) for cue in group))
+        matched_groups = 0
+        for group in groups:
+            found = False
+            for cue in group:
+                if ' ' in cue:
+                    found = cue in normalized
+                else:
+                    found = any(token == cue or (len(cue) >= 4 and token.startswith(cue)) for token in tokens)
+                if found:
+                    break
+            matched_groups += int(found)
         if matched_groups >= 2:
             candidates.append(intent)
+    return candidates
+
+
+def _compositional_intent(normalized: str) -> str | None:
+    """Return a single compositional intent, otherwise abstain."""
+    candidates = _compositional_candidates(normalized)
     return candidates[0] if len(candidates) == 1 else None
 
 
@@ -127,6 +143,15 @@ def classify_intent(
                 candidate = (float(weight), normalized_phrase)
                 if previous is None or candidate[0] > previous[0] or (candidate[0] == previous[0] and len(candidate[1]) > len(previous[1])):
                     scores[intent] = candidate
+
+    # If the message contains evidence for multiple different intent families,
+    # abstain even when only one family happened to match an exact phrase.
+    has_negation = any(word in _NEGATIONS for word in normalized.split())
+    composed = [] if has_negation else _compositional_candidates(normalized)
+    if len(composed) > 1:
+        return {"status": "ambiguous", "intent": "unknown", "confidence": 0.0,
+                "matched_phrase": None, "normalized_message": normalized, "game_id": game_id,
+                "reason": "multiple_compositional_intents_require_clarification"}
 
     ranked = sorted(
         ((score, intent, phrase) for intent, (score, phrase) in scores.items()),
