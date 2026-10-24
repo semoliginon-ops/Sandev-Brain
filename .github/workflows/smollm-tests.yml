@@ -24,7 +24,7 @@ jobs:
         run: PYTHONPATH=smollm python -m unittest discover -s smollm -v
       - name: Evaluate Indonesian intent development dataset (CI gate)
         run: PYTHONPATH=sandev_core python -m intent_dev_eval --min-accuracy 0.70
-      - name: Report fresh Indonesian intent holdout v2 (do not tune against this score)
+      - name: Report intent holdout v2 (now diagnostic; do not tune against this score)
         run: PYTHONPATH=sandev_core python -m intent_holdout_v2
       - name: Report older Indonesian intent diagnostic (not a pristine holdout)
         run: PYTHONPATH=sandev_core python -m heldout_intent_eval
