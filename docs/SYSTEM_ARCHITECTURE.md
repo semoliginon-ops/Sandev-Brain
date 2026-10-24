@@ -36,6 +36,18 @@ Context assembler ----> Structured persistent memory
                               +----> memory update
 ```
 
+## Current implementation milestone: deterministic decision baseline
+
+The first independent core lives in `sandev_core/brain.py`. It uses only the Python standard library and has no model/runtime/network dependency. Current behaviors:
+- normalize numeric need urgency to a 0..1 scale;
+- score adapter-provided candidates against needs and prioritized goals;
+- reject actions outside the adapter's allow-list;
+- check declared state preconditions and fail closed on missing state;
+- provide a deterministic tie-break and a reason for the selected intent;
+- return an empty intent when no candidate is feasible.
+
+This is deliberately a transparent baseline, not general intelligence. It assumes structured state and candidate actions are provided. It does not execute actions, update world state, generate open-ended dialogue, or prove successful transfer of teacher-model capabilities. GitHub Actions tests cover this baseline and the separate research harness without downloading model weights.
+
 ## What gets adapted from the teacher?
 
 The teacher is used during development to create candidate examples and compare behaviors. Humans/tests label which outputs are correct. Validated examples become:
