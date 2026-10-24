@@ -9,6 +9,7 @@ This folder contains executable, model-independent game-intelligence components.
 - Return deterministic action intents with explanations and rejected-candidate lists.
 - Validate a shared, versioned adapter contract for different game genres.
 - Revalidate a proposed intent against the latest snapshot before the host engine considers execution.
+- Assemble a bounded context packet from current state, goals, raw player message, recent verified events, and trusted memory.
 - Store only engine-confirmed events and player-approved facts in a structured memory ledger.
 - Record engine-confirmed outcomes and apply bounded, smoothed feedback within matching contexts.
 - Run regression scenarios across life simulation, shooter, and RPG decision cases.
@@ -19,6 +20,12 @@ This folder contains executable, model-independent game-intelligence components.
 `adapter.py` exposes `decide_from_snapshot(snapshot)`. A game supplies `game_id`, optional `state_version`, structured `state`, numeric `needs` (0–100 urgency), tagged `goals`, candidate actions, and `allowed_actions`. Candidate actions include a stable `action_id`, engine-known `kind`, optional `target`, tags, preconditions, base score, and cost.
 
 The adapter validates candidate shapes, rejects duplicate IDs and non-finite numeric scores, and returns a versioned intent envelope. The game integration must supply current state and legal candidates; the adapter does not connect to a live engine or generate those candidates itself.
+
+## Context packet
+
+`context.py` exposes `build_context(...)`, which assembles a versioned JSON-safe packet with game/actor identifiers, current authoritative state, goals, the player's raw message, bounded recent events, and retrieved memories. It preserves the message verbatim within a configurable character limit and marks it as `raw_uninterpreted_input`: context assembly is not language understanding.
+
+Recent events and retrieved memories are included only when their provenance is `engine_confirmed` or `player_approved`. The packet and state have configurable size limits. It does not infer current state from old memory, decide what a message means, generate dialogue, or call a model. Future language behavior can consume this packet and must be evaluated separately.
 
 ## Engine bridge and trust boundary
 
