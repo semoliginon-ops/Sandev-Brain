@@ -86,6 +86,23 @@ class IndonesianIntentTests(unittest.TestCase):
                 self.assertEqual(result["status"], "matched", result)
                 self.assertEqual(result["intent"], expected, result)
 
+    def test_mixed_defensive_instruction_prefers_explicit_safe_action(self):
+        cases = (
+            "Bantu aku berlindung sampai situasi aman",
+            "Jaga posisi dan jangan terpancing maju",
+            "Jangan dekati mereka, berlindung dulu",
+        )
+        for message in cases:
+            with self.subTest(message=message):
+                result = classify_intent(message)
+                self.assertEqual(result["status"], "matched", result)
+                self.assertEqual(result["intent"], "tactical_defend", result)
+
+    def test_action_choice_question_stays_ambiguous(self):
+        result = classify_intent("Menurutmu menyerang atau bertahan lebih baik?")
+        self.assertEqual(result["status"], "ambiguous")
+        self.assertEqual(result["intent"], "unknown")
+
     def test_negated_healing_request_is_not_a_heal_command(self):
         result = classify_intent("Jangan obati aku dulu, aku masih kuat")
         self.assertEqual(result["status"], "unknown")
