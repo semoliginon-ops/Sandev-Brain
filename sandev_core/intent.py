@@ -16,16 +16,16 @@ class IntentInputError(ValueError):
 
 
 DEFAULT_PATTERNS: tuple[dict[str, Any], ...] = (
-    {"intent": "greeting", "phrases": ("halo", "hai", "hei", "selamat pagi", "selamat siang", "selamat malam", "apa kabar"), "weight": 1.0},
-    {"intent": "thanks", "phrases": ("terima kasih", "makasih", "thanks", "aku berterima kasih"), "weight": 1.0},
-    {"intent": "farewell", "phrases": ("sampai jumpa", "dadah", "aku pergi dulu", "selamat tinggal", "bye"), "weight": 1.0},
-    {"intent": "help_request", "phrases": ("tolong bantu", "aku butuh bantuan", "bantu aku", "bisa bantu aku", "aku perlu bantuan", "help me"), "weight": 1.0},
-    {"intent": "danger", "phrases": ("aku diserang", "kita diserang", "ada musuh di belakang", "awas", "bahaya", "aku dalam bahaya", "musuh mendekat", "selamatkan aku"), "weight": 1.0},
-    {"intent": "heal_request", "phrases": ("sembuhkan aku", "aku butuh heal", "heal aku", "pulihkan hp", "aku butuh potion", "obati aku", "darahku tinggal sedikit", "hp ku rendah", "hp-ku rendah", "aku sekarat"), "weight": 1.0},
-    {"intent": "tactical_attack", "phrases": ("serang musuh", "serang target", "tembak musuh", "hajar mereka", "fokus serang", "maju menyerang", "habisi bos"), "weight": 1.0},
-    {"intent": "tactical_defend", "phrases": ("lindungi aku", "jaga aku", "bertahan", "mundur dulu", "cari perlindungan", "tutup sisi kiri", "tutup sisi kanan", "jangan menyerang", "ambil posisi bertahan"), "weight": 1.0},
-    {"intent": "comfort", "phrases": ("aku takut", "aku sedih", "aku kesepian", "aku sedang tidak baik", "temani aku", "aku butuh teman", "aku cemas"), "weight": 1.0},
-    {"intent": "banter", "phrases": ("ayo bercanda", "ceritakan lelucon", "buat aku tertawa", "lucu dong", "gombalin aku"), "weight": 1.0},
+    {"intent": "greeting", "phrases": ("halo", "hai", "hei", "selamat pagi", "selamat siang", "selamat malam", "apa kabar", "pagi kawan", "senang ketemu kamu lagi"), "weight": 1.0},
+    {"intent": "thanks", "phrases": ("terima kasih", "makasih", "thanks", "aku berterima kasih", "bantuanmu berarti banget", "bantuanmu sangat berarti", "aku menghargai bantuanmu"), "weight": 1.0},
+    {"intent": "farewell", "phrases": ("sampai jumpa", "dadah", "aku pergi dulu", "selamat tinggal", "bye", "aku cabut dulu", "sampai nanti"), "weight": 1.0},
+    {"intent": "help_request", "phrases": ("tolong bantu", "aku butuh bantuan", "bantu aku", "bisa bantu aku", "aku perlu bantuan", "help me", "bantu beresin ini", "aku kewalahan", "aku perlu pertolongan"), "weight": 1.0},
+    {"intent": "danger", "phrases": ("aku diserang", "kita diserang", "ada musuh di belakang", "awas", "bahaya", "aku dalam bahaya", "musuh mendekat", "selamatkan aku", "mengepung kita", "mengepun kita", "lawan mendekat", "ada lawan mendekat", "kita dikepung"), "weight": 1.0},
+    {"intent": "heal_request", "phrases": ("sembuhkan aku", "aku butuh heal", "heal aku", "pulihkan hp", "aku butuh potion", "obati aku", "darahku tinggal sedikit", "hp ku rendah", "hp-ku rendah", "aku sekarat", "kondisiku kritis", "perlu pemulihan", "isi lagi tenaga", "pulihkan tenagaku", "tenagaku habis", "darahku menipis"), "weight": 1.0},
+    {"intent": "tactical_attack", "phrases": ("serang musuh", "serang target", "tembak musuh", "hajar mereka", "fokus serang", "maju menyerang", "habisi bos", "arahkan tembakan", "hantam dia", "hantam mereka", "bidik lawan", "tembak lawan"), "weight": 1.0},
+    {"intent": "tactical_defend", "phrases": ("lindungi aku", "jaga aku", "bertahan", "mundur dulu", "cari perlindungan", "tutup sisi kiri", "tutup sisi kanan", "jangan menyerang", "ambil posisi bertahan", "berlindung di balik", "ambil jarak", "tahan posisi", "tetap di belakangku", "cari tempat berlindung"), "weight": 1.0},
+    {"intent": "comfort", "phrases": ("aku takut", "aku sedih", "aku kesepian", "aku sedang tidak baik", "temani aku", "aku butuh teman", "aku cemas", "temenin aku", "jangan tinggalin aku", "aku lagi down", "aku gelisah", "aku butuh ditemani"), "weight": 1.0},
+    {"intent": "banter", "phrases": ("ayo bercanda", "ceritakan lelucon", "buat aku tertawa", "lucu dong", "gombalin aku", "humor receh", "sesuatu yang kocak", "bikin suasana cair", "lempar candaan"), "weight": 1.0},
 )
 
 _NEGATIONS = {"tidak", "jangan", "bukan", "belum", "tak", "enggan"}
