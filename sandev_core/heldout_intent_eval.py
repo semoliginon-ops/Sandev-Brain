@@ -51,6 +51,7 @@ def run_evaluation() -> dict[str, object]:
     rows: list[dict[str, object]] = []
     by_label: dict[str, list[bool]] = defaultdict(list)
     statuses: Counter[str] = Counter()
+    confusion: dict[str, Counter[str]] = defaultdict(Counter)
     correct = 0
     for message, expected in CASES:
         result = classify_intent(message)
@@ -58,6 +59,7 @@ def run_evaluation() -> dict[str, object]:
         passed = actual == expected
         correct += int(passed)
         by_label[expected].append(passed)
+        confusion[expected][actual] += 1
         statuses[str(result["status"])] += 1
         rows.append({
             "message": message,
@@ -82,6 +84,7 @@ def run_evaluation() -> dict[str, object]:
         "accuracy": correct / total if total else 1.0,
         "status_counts": dict(sorted(statuses.items())),
         "per_expected_intent": breakdown,
+        "confusion_matrix": {label: dict(sorted(counts.items())) for label, counts in sorted(confusion.items())},
         "rows": rows,
     }
 
@@ -96,6 +99,9 @@ def main() -> int:
     print("Per expected intent:")
     for label, item in report["per_expected_intent"].items():
         print(f"  {label}: {item['correct']}/{item['total']} ({item['accuracy']:.1%})")
+    print("Confusion matrix (expected -> predicted counts):")
+    for label, counts in report["confusion_matrix"].items():
+        print(f"  {label}: {counts}")
     print("Mismatches:")
     for row in report["rows"]:
         if not row["passed"]:
