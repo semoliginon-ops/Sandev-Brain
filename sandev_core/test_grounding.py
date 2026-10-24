@@ -1,6 +1,6 @@
 import unittest
 
-from grounding import GroundingInputError, ground_entities
+from grounding import GroundingInputError, ground_entities, resolve_context_reference
 
 
 class EntityGroundingTests(unittest.TestCase):
@@ -50,6 +50,43 @@ class EntityGroundingTests(unittest.TestCase):
             ])
         with self.assertRaises(GroundingInputError):
             ground_entities("goblin", [{"id": "x", "name": "Goblin", "aliases": "gob"}])
+
+    def test_pronoun_resolves_only_from_explicit_focus_id(self):
+        entities = [
+            {"id": "ally-1", "name": "Falcon"},
+            {"id": "enemy-1", "name": "Bandit"},
+        ]
+        result = resolve_context_reference("Serang dia", entities, context={"focus_entity_id": "enemy-1"})
+        self.assertEqual(result["status"], "grounded")
+        self.assertEqual(result["entity_id"], "enemy-1")
+
+    def test_pronoun_without_focus_is_not_guessed(self):
+        result = resolve_context_reference("Serang dia", [{"id": "a", "name": "Falcon"}], context={})
+        self.assertEqual(result["status"], "unresolved")
+
+    def test_unique_hostile_behind_focus_uses_engine_relation(self):
+        entities = [
+            {"id": "ally-1", "name": "Falcon"},
+            {"id": "enemy-1", "name": "Bandit", "is_hostile": True, "relations_to": {"ally-1": "behind"}},
+            {"id": "enemy-2", "name": "Goblin", "is_hostile": True, "relations_to": {"ally-1": "ahead"}},
+        ]
+        result = resolve_context_reference(
+            "Serang musuh di belakangnya", entities, context={"focus_entity_id": "ally-1"}
+        )
+        self.assertEqual(result["status"], "grounded")
+        self.assertEqual(result["entity_id"], "enemy-1")
+
+    def test_multiple_hostiles_behind_focus_are_ambiguous(self):
+        entities = [
+            {"id": "ally-1", "name": "Falcon"},
+            {"id": "enemy-1", "name": "Bandit", "is_hostile": True, "relations_to": {"ally-1": "behind"}},
+            {"id": "enemy-2", "name": "Goblin", "is_hostile": True, "relations_to": {"ally-1": "behind"}},
+        ]
+        result = resolve_context_reference(
+            "Serang musuh di belakangnya", entities, context={"focus_entity_id": "ally-1"}
+        )
+        self.assertEqual(result["status"], "ambiguous")
+        self.assertIsNone(result["entity_id"])
 
     def test_cross_genre_entity_names(self):
         cases = [
