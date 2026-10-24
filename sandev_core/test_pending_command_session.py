@@ -91,6 +91,68 @@ class PendingCommandSessionTests(unittest.TestCase):
         self.assertEqual(self.registry.get(one["action_id"], "player-1")["status"], "pending")
         self.assertEqual(self.registry.get(two["action_id"], "player-2")["status"], "cancelled")
 
+    def test_execute_pending_requires_host_confirmation(self):
+        proposal = self.handle("Serang Goblin", version="v3")
+        calls = []
+
+        def engine(payload, expected_version):
+            calls.append((payload, expected_version))
+            return {"confirmed": True, "result": {"damage": 12}}
+
+        result = self.session.execute_pending(
+            "player-1",
+            proposal["action_id"],
+            get_current_state_version=lambda: "v3",
+            engine_execute_if_version_matches=engine,
+        )
+        self.assertTrue(result["accepted"])
+        self.assertTrue(result["execution_confirmed"])
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(calls[0][1], "v3")
+        self.assertEqual(self.registry.get(proposal["action_id"], "player-1")["status"], "completed")
+
+    def test_execute_pending_rejects_stale_version_without_calling_engine(self):
+        proposal = self.handle("Serang Goblin", version="v3")
+        calls = []
+        result = self.session.execute_pending(
+            "player-1",
+            proposal["action_id"],
+            get_current_state_version=lambda: "v4",
+            engine_execute_if_version_matches=lambda payload, version: calls.append(True) or {"confirmed": True},
+        )
+        self.assertFalse(result["accepted"])
+        self.assertFalse(result["execution_confirmed"])
+        self.assertEqual(calls, [])
+
+    def test_execute_pending_does_not_claim_success_without_confirmation(self):
+        proposal = self.handle("Serang Goblin", version="v3")
+        result = self.session.execute_pending(
+            "player-1",
+            proposal["action_id"],
+            get_current_state_version=lambda: "v3",
+            engine_execute_if_version_matches=lambda payload, version: {"confirmed": False, "result": {}},
+        )
+        self.assertFalse(result["accepted"])
+        self.assertFalse(result["execution_confirmed"])
+        self.assertEqual(self.registry.get(proposal["action_id"], "player-1")["status"], "failed")
+
+    def test_execute_pending_marks_host_exception_as_failed(self):
+        proposal = self.handle("Serang Goblin", version="v3")
+
+        def engine(payload, version):
+            raise RuntimeError("engine unavailable")
+
+        result = self.session.execute_pending(
+            "player-1",
+            proposal["action_id"],
+            get_current_state_version=lambda: "v3",
+            engine_execute_if_version_matches=engine,
+        )
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(result["execution_confirmed"])
+        self.assertEqual(self.registry.get(proposal["action_id"], "player-1")["status"], "failed")
+
     def test_state_version_is_stored_for_execution_gate(self):
         result = self.handle("Serang Goblin", version="world-7")
         authorization = self.registry.authorize_execution(
