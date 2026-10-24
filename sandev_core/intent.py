@@ -273,11 +273,18 @@ def interpret_message(message: str, *, context: Mapping[str, Any] | None = None)
     else:
         negation = "not_detected"
 
-    needs_clarification = result.get("status") in {"unknown", "ambiguous"} or speech_act in {"question", "unclear", "cancellation", "mention"}
+    action_target_unresolved = result.get("intent") in _ACTION_INTENTS
+    needs_clarification = (
+        result.get("status") in {"unknown", "ambiguous"}
+        or speech_act in {"question", "unclear", "cancellation", "mention"}
+        or action_target_unresolved
+    )
     if result.get("status") == "ambiguous":
         clarification_reason = result.get("reason", "ambiguous_message")
     elif result.get("status") == "unknown":
         clarification_reason = result.get("reason", "unsupported_message")
+    elif action_target_unresolved:
+        clarification_reason = "action_target_requires_current_engine_grounding"
     elif speech_act == "question":
         clarification_reason = "question_is_not_an_action_order"
     elif speech_act == "cancellation":
