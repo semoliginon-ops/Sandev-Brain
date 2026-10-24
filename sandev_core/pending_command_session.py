@@ -131,7 +131,21 @@ class PendingCommandSession:
             raise ValueError("engine_execute_if_version_matches must be callable")
 
         with self._session_lock(session_id):
-            current_version = get_current_state_version()
+            try:
+                current_version = get_current_state_version()
+            except Exception as exc:
+                self.registry.cancel(
+                    session_id,
+                    action_id=action_id,
+                    reason="state_version_unavailable",
+                )
+                return {
+                    "accepted": False,
+                    "status": "rejected",
+                    "reason": "current_state_version_unavailable",
+                    "error_type": type(exc).__name__,
+                    "execution_confirmed": False,
+                }
             authorization = self.registry.authorize_execution(
                 action_id, session_id, current_version
             )
