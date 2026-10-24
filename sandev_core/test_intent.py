@@ -1,6 +1,6 @@
 import unittest
 
-from intent import IntentInputError, classify_intent, normalize_text
+from intent import IntentInputError, classify_intent, interpret_message, normalize_text
 from intent_benchmark import run_benchmark
 
 
@@ -50,7 +50,6 @@ class IndonesianIntentTests(unittest.TestCase):
         self.assertEqual(normalize_text("  HAI!!!  "), "hai")
         self.assertEqual(normalize_text("Gak apa-apa"), "tidak apa-apa")
 
-
     def test_recognizes_new_paraphrases_conservatively(self):
         cases = {
             "Aku cabut dulu, sampai nanti": "farewell",
@@ -64,7 +63,6 @@ class IndonesianIntentTests(unittest.TestCase):
         for message, expected in cases.items():
             with self.subTest(message=message):
                 self.assertEqual(classify_intent(message)["intent"], expected)
-
 
     def test_recognizes_more_natural_indonesian_paraphrases(self):
         cases = {
@@ -160,6 +158,44 @@ class IndonesianIntentTests(unittest.TestCase):
     def test_does_not_guess_from_context_only(self):
         result = classify_intent("hmm...", context={"game_id": "rpg", "needs": {"health": 99}})
         self.assertEqual(result["intent"], "unknown")
+
+    def test_interpretation_envelope_never_authorizes_execution(self):
+        for message in ("Serang musuh!", "Jangan serang musuh", "Apa kita harus menyerang?", "Aku mau menyerang nanti"):
+            with self.subTest(message=message):
+                result = interpret_message(message)
+                self.assertFalse(result["execution_allowed"])
+                self.assertIn(result["speech_act"], {"command", "question", "unclear"})
+                self.assertIn(result["temporal_scope"], {"immediate", "future_intended", "unspecified", "past_or_recounted"})
+
+    def test_interpretation_envelope_identifies_clear_command_and_unresolved_target(self):
+        result = interpret_message("Serang musuh!")
+        self.assertEqual(result["speech_act"], "command")
+        self.assertEqual(result["temporal_scope"], "immediate")
+        self.assertEqual(result["intent"], "tactical_attack")
+        self.assertEqual(result["target_grounding"], "unresolved")
+        self.assertFalse(result["needs_clarification"])
+
+    def test_interpretation_envelope_does_not_promote_future_intention(self):
+        result = interpret_message("Aku mau serang musuh nanti")
+        self.assertEqual(result["speech_act"], "unclear")
+        self.assertEqual(result["temporal_scope"], "future_intended")
+        self.assertTrue(result["needs_clarification"])
+        self.assertFalse(result["execution_allowed"])
+
+    def test_interpretation_envelope_marks_negation_and_questions(self):
+        negated = interpret_message("Jangan serang musuh")
+        self.assertEqual(negated["negation"], "detected")
+        self.assertFalse(negated["execution_allowed"])
+        question = interpret_message("Apakah kita perlu menyerang?")
+        self.assertEqual(question["speech_act"], "question")
+        self.assertTrue(question["needs_clarification"])
+        self.assertFalse(question["execution_allowed"])
+
+    def test_interpretation_envelope_marks_cancellation_as_non_executable(self):
+        result = interpret_message("Batalkan")
+        self.assertEqual(result["speech_act"], "cancellation")
+        self.assertTrue(result["needs_clarification"])
+        self.assertFalse(result["execution_allowed"])
 
     def test_hand_authored_regression_benchmark(self):
         report = run_benchmark()
