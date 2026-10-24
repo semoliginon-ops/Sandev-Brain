@@ -175,5 +175,40 @@ class MultiStepPlannerTests(unittest.TestCase):
         self.assertEqual(result["reason"], "proposal_target_does_not_match_command")
 
 
+    def test_contextual_pronoun_revalidates_against_fresh_context(self):
+        from planner import validate_plan_step
+        context = {"state_version": 17, "focus_entity_id": "enemy-2"}
+        plan = plan_player_command("Serang dia", ENTITIES, context=context)
+        self.assertEqual(plan["status"], "plan_proposal")
+        result = validate_plan_step(
+            plan, 1, ENTITIES, current_state_version=17, current_context=context,
+        )
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["proposal"]["target"]["entity_id"], "enemy-2")
+        self.assertFalse(result["execution_allowed"])
+
+    def test_contextual_pronoun_rejects_changed_focus(self):
+        from planner import validate_plan_step
+        original = {"state_version": 17, "focus_entity_id": "enemy-2"}
+        current = {"state_version": 17, "focus_entity_id": "enemy-1"}
+        plan = plan_player_command("Serang dia", ENTITIES, context=original)
+        result = validate_plan_step(
+            plan, 1, ENTITIES, current_state_version=17, current_context=current,
+        )
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "proposal_target_does_not_match_command")
+
+    def test_contextual_pronoun_rejects_stale_context_version(self):
+        from planner import validate_plan_step
+        context = {"state_version": 17, "focus_entity_id": "enemy-2"}
+        plan = plan_player_command("Serang dia", ENTITIES, context=context)
+        stale = {"state_version": 16, "focus_entity_id": "enemy-2"}
+        result = validate_plan_step(
+            plan, 1, ENTITIES, current_state_version=17, current_context=stale,
+        )
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "stale_context_state_version")
+
+
 if __name__ == "__main__":
     unittest.main()
