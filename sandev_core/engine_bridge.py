@@ -27,10 +27,13 @@ def validate_intent(snapshot: Mapping[str, Any], intent: Mapping[str, Any]) -> d
 
     action_id = intent.get("action_id")
     action = intent.get("action")
-    if not isinstance(action_id, str) or not action_id:
+    if not isinstance(action_id, str) or not action_id.strip():
         return {"accepted": False, "status": "rejected", "reason": "missing action id"}
-    if not isinstance(action, Mapping) or not isinstance(action.get("type"), str):
+    if not isinstance(action, Mapping) or not isinstance(action.get("type"), str) or not action["type"].strip():
         return {"accepted": False, "status": "rejected", "reason": "empty or malformed intent"}
+    target = action.get("target", "")
+    if not isinstance(target, str):
+        return {"accepted": False, "status": "rejected", "reason": "intent target must be a string"}
 
     if "state_version" in snapshot and intent.get("state_version") != snapshot.get("state_version"):
         return {"accepted": False, "status": "rejected", "reason": "stale state version"}
@@ -40,6 +43,8 @@ def validate_intent(snapshot: Mapping[str, Any], intent: Mapping[str, Any]) -> d
     state = snapshot.get("state")
     if not isinstance(candidates, (list, tuple)) or not isinstance(allowed, (list, tuple)) or not isinstance(state, Mapping):
         raise AdapterInputError("snapshot requires candidates, allowed_actions, and object state")
+    if any(not isinstance(kind, str) or not kind.strip() for kind in allowed):
+        raise AdapterInputError("allowed_actions must contain non-empty strings")
     if action["type"] not in allowed:
         return {"accepted": False, "status": "rejected", "reason": "action not in current allow-list"}
 
@@ -47,7 +52,14 @@ def validate_intent(snapshot: Mapping[str, Any], intent: Mapping[str, Any]) -> d
     if len(matches) != 1:
         return {"accepted": False, "status": "rejected", "reason": "action id is not uniquely present in current candidates"}
     candidate = matches[0]
-    if candidate.get("kind") != action.get("type") or candidate.get("target", "") != action.get("target", ""):
+    if not isinstance(candidate.get("action_id"), str) or not candidate["action_id"].strip():
+        return {"accepted": False, "status": "rejected", "reason": "candidate action id must be a non-empty string"}
+    if not isinstance(candidate.get("kind"), str) or not candidate["kind"].strip():
+        return {"accepted": False, "status": "rejected", "reason": "candidate kind must be a non-empty string"}
+    candidate_target = candidate.get("target", "")
+    if not isinstance(candidate_target, str):
+        return {"accepted": False, "status": "rejected", "reason": "candidate target must be a string"}
+    if candidate.get("kind") != action["type"] or candidate_target != target:
         return {"accepted": False, "status": "rejected", "reason": "intent does not match current candidate"}
     preconditions = candidate.get("preconditions", {})
     if not isinstance(preconditions, Mapping):
@@ -61,6 +73,6 @@ def validate_intent(snapshot: Mapping[str, Any], intent: Mapping[str, Any]) -> d
         "status": "validated_proposal_engine_must_execute_and_confirm",
         "game_id": snapshot.get("game_id", "unspecified"),
         "action_id": action_id,
-        "action": {"type": action["type"], "target": action.get("target", "")},
+        "action": {"type": action["type"], "target": target},
         "state_version": snapshot.get("state_version"),
     }
