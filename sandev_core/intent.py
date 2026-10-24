@@ -23,7 +23,7 @@ DEFAULT_PATTERNS: tuple[dict[str, Any], ...] = (
     {"intent": "danger", "phrases": ("aku diserang", "kita diserang", "ada musuh di belakang", "awas", "bahaya", "aku dalam bahaya", "musuh mendekat", "selamatkan aku", "mengepung kita", "mengepun kita", "lawan mendekat", "ada lawan mendekat", "kita dikepung", "mereka ada di dekat kita", "situasinya gawat", "kita terancam", "musuh sudah mengejar kita", "posisi kita sedang dikepung", "ada yang mengincar kita dari arah belakang"), "weight": 1.0},
     {"intent": "heal_request", "phrases": ("sembuhkan aku", "aku butuh heal", "heal aku", "pulihkan hp", "aku butuh potion", "obati aku", "darahku tinggal sedikit", "hp ku rendah", "hp-ku rendah", "aku sekarat", "kondisiku kritis", "perlu pemulihan", "isi lagi tenaga", "pulihkan tenagaku", "tenagaku habis", "darahku menipis", "pulihkan kesehatanku", "obat untuk memulihkan diri", "sisa darahku sedikit sekali", "aku hampir tumbang cepat pulihkan aku", "bisa pakai ramuan untuk memulihkan kondisiku"), "weight": 1.0},
     {"intent": "tactical_attack", "phrases": ("serang musuh", "serang target", "tembak musuh", "hajar mereka", "fokus serang", "maju menyerang", "habisi bos", "arahkan tembakan", "hantam dia", "hantam mereka", "bidik lawan", "tembak lawan", "jadikan dia target", "fokus pada lawan itu", "hajar musuh yang di depan", "jadikan musuh itu sasaran utama"), "weight": 1.0},
-    {"intent": "tactical_defend", "phrases": ("lindungi aku", "jaga aku", "bertahan", "mundur dulu", "cari perlindungan", "tutup sisi kiri", "tutup sisi kanan", "jangan menyerang", "ambil posisi bertahan", "berlindung di balik", "ambil jarak", "tahan posisi", "tetap di belakangku", "cari tempat berlindung", "berlindung dulu", "tolong lindungi bagian belakang", "tetap di tempat aman", "jaga bagian belakang"), "weight": 1.0},
+    {"intent": "tactical_defend", "phrases": ("lindungi aku", "jaga aku", "bertahan", "mundur dulu", "cari perlindungan", "tutup sisi kiri", "tutup sisi kanan", "jangan menyerang", "ambil posisi bertahan", "berlindung di balik", "ambil jarak", "tahan posisi", "tetap di belakangku", "cari tempat berlindung", "berlindung dulu", "tolong lindungi bagian belakang", "tetap di tempat aman", "jaga bagian belakang", "bantu aku berlindung sampai situasi aman", "jaga posisi dan jangan terpancing maju", "jangan dekati mereka berlindung dulu"), "weight": 1.0},
     {"intent": "comfort", "phrases": ("aku takut", "aku sedih", "aku kesepian", "aku sedang tidak baik", "temani aku", "aku butuh teman", "aku cemas", "temenin aku", "jangan tinggalin aku", "aku lagi down", "aku gelisah", "aku butuh ditemani", "aku lagi murung", "aku merasa cemas sendirian", "jangan pergi dulu"), "weight": 1.0},
     {"intent": "banter", "phrases": ("ayo bercanda", "ceritakan lelucon", "buat aku tertawa", "lucu dong", "gombalin aku", "humor receh", "sesuatu yang kocak", "bikin suasana cair", "lempar candaan", "hibur aku dengan lelucon", "bikin aku ngakak", "lontarkan candaan yang lucu"), "weight": 1.0},
 )
@@ -143,6 +143,15 @@ def classify_intent(
                 candidate = (float(weight), normalized_phrase)
                 if previous is None or candidate[0] > previous[0] or (candidate[0] == previous[0] and len(candidate[1]) > len(previous[1])):
                     scores[intent] = candidate
+
+    # A specific defensive instruction can contain generic help wording
+    # (e.g. "bantu aku berlindung"). Prefer the explicit defensive action
+    # over the broad "bantu aku" help-request cue; this is not action execution.
+    defensive_cues = ("berlindung", "bertahan", "mundur", "jaga posisi", "lindungi")
+    if "tactical_defend" in scores and "help_request" in scores and any(
+        cue in normalized for cue in defensive_cues
+    ) and scores["help_request"][1] in {"bantu aku", "bisa bantu aku", "tolong bantu"}:
+        del scores["help_request"]
 
     # If the message contains evidence for multiple different intent families,
     # abstain even when only one family happened to match an exact phrase.
