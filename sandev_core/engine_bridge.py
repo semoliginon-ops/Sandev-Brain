@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from adapter import AdapterInputError, _preconditions_met
+from adapter import AdapterInputError
+from brain import _preconditions_met
 
 
 def validate_intent(snapshot: Mapping[str, Any], intent: Mapping[str, Any]) -> dict[str, Any]:
