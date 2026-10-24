@@ -9,7 +9,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from grounding import GroundingInputError, ground_entities, resolve_context_reference
-from intent import IntentInputError, classify_intent, normalize_text
+from intent import IntentInputError, interpret_message, normalize_text
 
 
 class CommandInputError(ValueError):
@@ -41,10 +41,18 @@ def interpret_player_command(
 
     try:
         normalized = normalize_text(message)
-        interpretation = classify_intent(
+        language_envelope = interpret_message(
             message,
             context={"game_id": context.get("game_id", "unspecified")} if context is not None else None,
         )
+        # Keep the language layer's speech-act and temporal judgments attached
+        # to the proposal pipeline. The envelope is descriptive only; it never
+        # grants execution permission.
+        interpretation = {
+            **language_envelope,
+            "status": language_envelope["intent_status"],
+            "reason": language_envelope["reason"],
+        }
         grounding = ground_entities(message, entities)
         if grounding["status"] == "unresolved" and context is not None:
             contextual = resolve_context_reference(message, entities, context=context)
@@ -59,6 +67,7 @@ def interpret_player_command(
             "intent": interpretation.get("intent", "unknown"),
             "target": None,
             "grounding": grounding,
+            "language": language_envelope,
             "reason": "multi_step_instruction_not_planned",
             "execution_allowed": False,
         }
@@ -93,22 +102,36 @@ def interpret_player_command(
             "intent": "unknown",
             "target": None,
             "grounding": grounding,
+            "language": language_envelope,
             "reason": "question_or_action_alternative_requires_clarification",
             "execution_allowed": False,
         }
-    # Do not let the explicit-verb fallback turn a quoted/recounted mention or
-    # future intention into an immediate command. This classifier does not support
-    # scheduling actions, so those cases must remain non-actionable.
-    if interpretation.get("reason") in {
-        "conversational_mention_is_not_an_action_order",
-        "stated_intention_is_not_an_immediate_action_order",
-    }:
+    # The explicit-verb fallback must never override the language envelope's
+    # speech-act or time-scope assessment. Past/recounted mentions and future
+    # intentions are not immediate action orders; questions and cancellations
+    # must be clarified before any proposal is formed.
+    if (
+        interpretation.get("speech_act") in {"question", "cancellation", "mention"}
+        or interpretation.get("temporal_scope") in {"future_intended", "past_or_recounted"}
+        or interpretation.get("reason") in {
+            "conversational_mention_is_not_an_action_order",
+            "stated_intention_is_not_an_immediate_action_order",
+        }
+    ):
         return {
             "status": "not_a_confident_action",
             "intent": "unknown",
             "target": None,
             "grounding": grounding,
-            "reason": interpretation["reason"],
+            "language": language_envelope,
+            "reason": interpretation["reason"] if interpretation.get("reason") in {
+                "conversational_mention_is_not_an_action_order",
+                "stated_intention_is_not_an_immediate_action_order",
+            } else (
+                "question_or_cancellation_requires_clarification"
+                if interpretation.get("speech_act") in {"question", "cancellation"}
+                else "non_immediate_temporal_scope"
+            ),
             "execution_allowed": False,
         }
 
@@ -120,6 +143,7 @@ def interpret_player_command(
             "intent": "unknown",
             "target": None,
             "grounding": grounding,
+            "language": language_envelope,
             "reason": "negated_explicit_attack_requires_clarification",
             "execution_allowed": False,
         }
@@ -144,6 +168,7 @@ def interpret_player_command(
             "intent": interpretation["intent"],
             "target": None,
             "grounding": grounding,
+            "language": language_envelope,
             "reason": interpretation["reason"],
             "execution_allowed": False,
         }
@@ -164,6 +189,7 @@ def interpret_player_command(
             "status": "ambiguous_target",
             "intent": intent,
             "target": None,
+            "language": language_envelope,
             "grounding": {
                 **grounding,
                 "status": "ambiguous",
@@ -181,6 +207,7 @@ def interpret_player_command(
             "intent": intent,
             "target": None,
             "grounding": grounding,
+            "language": language_envelope,
             "reason": "target_mentions_are_ambiguous",
             "execution_allowed": False,
         }
@@ -190,6 +217,7 @@ def interpret_player_command(
             "intent": intent,
             "target": None,
             "grounding": grounding,
+            "language": language_envelope,
             "reason": "attack_target_not_grounded_in_current_snapshot",
             "execution_allowed": False,
         }
@@ -202,6 +230,7 @@ def interpret_player_command(
             if grounding["status"] == "grounded" else None
         ),
         "grounding": grounding,
+        "language": language_envelope,
         "reason": "single_curated_action_intent_with_current_context",
         "execution_allowed": False,
     }
