@@ -95,6 +95,30 @@ def interpret_player_command(
 
     intent = interpretation["intent"]
     target_required = intent == "tactical_attack"
+    # Do not silently prefer a named entity when the same command also uses
+    # a contextual pronoun. The pronoun may refer to a different entity, and
+    # the current grammar cannot safely determine whether this is correction,
+    # conjunction, or a choice (e.g. "Serang dia atau Goblin").
+    if (
+        target_required
+        and grounding["status"] == "grounded"
+        and re.search(r"\\b(dia|dirinya)\\b", normalized)
+    ):
+        return {
+            "status": "ambiguous_target",
+            "intent": intent,
+            "target": None,
+            "grounding": {
+                **grounding,
+                "status": "ambiguous",
+                "entity_id": None,
+                "entity_name": None,
+                "candidates": grounding.get("candidates", []),
+                "reason": "named_target_conflicts_with_contextual_pronoun",
+            },
+            "reason": "named_target_conflicts_with_contextual_pronoun",
+            "execution_allowed": False,
+        }
     if grounding["status"] == "ambiguous":
         return {
             "status": "ambiguous_target",
