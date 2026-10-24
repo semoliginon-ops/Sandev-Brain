@@ -18,7 +18,7 @@ memory_update adalah usulan; engine wajib memverifikasi kejadian sebelum menyimp
 def _extract_json(raw: str) -> dict[str, Any]:
     fence = chr(96) * 3
     text = re.sub(r"^\s*" + re.escape(fence) + r"(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
-    text = re.sub(r"\s*" + re.escape(fence) + r"\\s*$", "", text)
+    text = re.sub(r"\s*" + re.escape(fence) + r"\s*$", "", text)
     start, end = text.find("{"), text.rfind("}")
     if start < 0 or end <= start: raise ValueError("Model output contains no JSON object")
     obj = json.loads(text[start:end + 1])
