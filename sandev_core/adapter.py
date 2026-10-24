@@ -50,7 +50,7 @@ def decide_from_snapshot(
     """Validate a generic snapshot and return an intent-only decision envelope.
 
     Required fields: state, needs, goals, candidates, allowed_actions.
-    Optional field: game_id. Unknown game-specific state keys are preserved.
+    Optional fields: game_id and state_version. Unknown game-specific state keys are preserved.
     The host game must validate the returned intent again before execution.
     """
     data = _mapping(snapshot, "snapshot")
@@ -107,5 +107,7 @@ def decide_from_snapshot(
     result = decision_to_dict(decision)
     result["contract_version"] = "1.0"
     result["game_id"] = data.get("game_id", "unspecified")
+    if "state_version" in data:
+        result["state_version"] = data["state_version"]
     result["status"] = "intent_only_engine_must_validate"
     return result
