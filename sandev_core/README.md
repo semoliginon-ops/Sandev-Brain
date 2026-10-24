@@ -11,6 +11,7 @@ This folder contains executable, model-independent game-intelligence components.
 - Revalidate a proposed intent against the latest snapshot before the host engine considers execution.
 - Assemble a bounded context packet from current state, explicit need urgency, goals, raw player message, recent verified events, and trusted memory.
 - Classify a limited set of Indonesian player messages using transparent phrase patterns, with safe unknown/ambiguous results.
+- Connect context packets, intent classification, and curated companion dialogue through a small conversation pipeline.
 - Select curated dialogue lines by validated intent, genre, explicit urgent needs, and trusted context tags.
 - Store only engine-confirmed events and player-approved facts in a structured memory ledger.
 - Record engine-confirmed outcomes and apply bounded, smoothed feedback within matching contexts.
@@ -31,11 +32,13 @@ Recent events and retrieved memories are included only when their provenance is 
 
 ## Indonesian intent and contextual response baseline
 
-`intent.py` exposes `classify_intent(message, context=None)`. It normalizes case and punctuation plus a few casual Indonesian spellings, then matches an auditable set of phrases. Current labels include greeting, thanks, farewell, help request, danger, healing, tactical attack/defense, comfort, and banter. It returns a matched phrase and rule-match strength, or fails closed as `unknown`/`ambiguous`.
+`intent.py` exposes `classify_intent(message, context=None)`. It normalizes case and punctuation plus a few casual Indonesian spellings, then matches an auditable set of phrases. Current labels include greeting, thanks, farewell, help request, danger, healing, tactical attack/defense, comfort, and banter. It returns a matched phrase and rule-match strength, or fails closed as `unknown`/`ambiguous`. Immediate negation before a matched phrase is conservatively ignored, but this is not full grammatical negation understanding.
+
+`conversation.py` exposes `respond_to_context(context, response_patterns)`: it validates the context packet, classifies its raw player message, and selects an authored response through `language.py`. Unknown or ambiguous messages yield no response instead of a guessed line. The result includes interpretation and response metadata for auditing. It does not execute game actions or generate novel sentences.
 
 `intent_benchmark.py` provides a small, hand-authored regression set covering known phrases, unsupported messages, and ambiguity. Run it with `PYTHONPATH=sandev_core python -m intent_benchmark`. This is a sanity check, not a held-out or independent intelligence evaluation.
 
-The current interpreter is intentionally narrow: match strength is not a calibrated probability, game context is metadata only, and it does not reliably understand negation, sarcasm, indirect requests, or unseen phrasing. A context-only guess is not made. Expand it with reviewed examples and evaluate on a held-out set before making stronger language-understanding claims.
+The current interpreter is intentionally narrow: match strength is not a calibrated probability, game context is metadata only, and it does not reliably understand complex negation, sarcasm, indirect requests, or unseen phrasing. A context-only guess is not made. Expand it with reviewed examples and evaluate on a held-out set before making stronger language-understanding claims.
 
 `language.py` selects among authored response patterns using the intent label supplied by the interpreter/caller. It can filter by game, trusted context tags, and urgent needs, with a deterministic tie-break and safe no-match result. This selector does not generate new sentences. Open-ended companion chat, spontaneous dialogue, broad Indonesian fluency, and personality consistency are not yet demonstrated.
 
