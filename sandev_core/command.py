@@ -34,11 +34,13 @@ def interpret_player_command(
     context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a cautious proposal, never an executable game action."""
-    normalized = normalize_text(message)
+    if not isinstance(message, str):
+        raise CommandInputError("message must be a string")
     if context is not None and not isinstance(context, Mapping):
         raise CommandInputError("context must be an object")
 
     try:
+        normalized = normalize_text(message)
         interpretation = classify_intent(
             message,
             context={"game_id": context.get("game_id", "unspecified")} if context is not None else None,
