@@ -147,7 +147,7 @@ def classify_intent(
     # Mentions and advice questions are conversational context, not action orders.
     # Avoid turning a quoted/recounted action phrase into an instruction.
     non_command_context = re.search(
-        r"\\b(cuma cerita|cerita soal|cerita tentang|apa pendapatmu|menurutmu kalau|aku bilang tadi|aku tadi bilang)\\b",
+        r"\b(cuma cerita|cerita soal|cerita tentang|apa pendapatmu|menurutmu kalau|aku bilang tadi|aku tadi bilang)\b",
         normalized,
     )
     if non_command_context and any(
