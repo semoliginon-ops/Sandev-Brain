@@ -66,6 +66,8 @@ There is no claim that teacher-model capabilities have already transferred. Any 
 
 The same core contract can represent RPG actions (talk, explore, equip, attack, use item), shooter actions (seek cover, reload, flank, retreat), and life-simulation actions (eat, rest, work, socialize, maintain home). Each game provides the current state and legal candidate actions. The game engine remains authoritative.
 
+The host-facing schema, genre examples, execution handoff, and acceptance checklist are specified in [GAME_ENGINE_INTEGRATION_CONTRACT.md](GAME_ENGINE_INTEGRATION_CONTRACT.md). Treat it as a checklist for each new game integration, not as evidence that the integration already exists.
+
 ## Memory and truth
 
 Separate durable facts, recent events, inferred preferences, and uncertain beliefs. Record provenance and confidence where useful. Teacher-generated suggestions are not game truth; only confirmed engine events or explicitly approved player facts may become durable facts. The context assembler filters history by provenance, but comprehensive contradiction handling, privacy controls, retention, and forgetting policies are still future work.
