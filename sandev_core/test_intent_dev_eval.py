@@ -21,7 +21,7 @@ class IntentDevelopmentEvaluationTests(unittest.TestCase):
             "Bantuan tadi sungguh berharga buatku": "thanks",
             "Aku undur diri dulu ya": "farewell",
             "Aku kesulitan mengurus ini sendirian": "help_request",
-            "Kita sedang dalam ancaman besar": "danger",
+            "Ancaman musuh semakin mendekat": "danger",
             "Aku butuh ramuan penyembuh sekarang": "heal_request",
             "Bidik penyerang yang paling berbahaya": "tactical_attack",
             "Kita perlu memperkuat pertahanan di utara": "tactical_defend",
