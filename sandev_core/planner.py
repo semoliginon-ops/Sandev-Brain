@@ -188,8 +188,32 @@ def validate_plan_step(
         return reject("step_is_not_a_proposal")
     if proposal.get("execution_allowed") is not False:
         return reject("step_must_remain_non_executable")
-    allowed_intents = {"tactical_attack", "tactical_defend", "heal_request", "help_request"}
+    command = step.get("command")
+    if not isinstance(command, str) or not command.strip():
+        return reject("step_command_missing")
+
+    # Re-interpret the original step against the current entity snapshot.
+    # Do not trust mutable plan fields as the source of intent/target truth.
+    try:
+        recomputed = interpret_player_command(command, current_entities)
+    except CommandInputError:
+        return reject("step_command_cannot_be_revalidated")
+    if recomputed.get("status") != "proposal":
+        return reject("step_command_no_longer_resolves")
     intent = proposal.get("intent")
+    if intent != recomputed.get("intent"):
+        return reject("proposal_intent_does_not_match_command")
+    if proposal.get("target") != recomputed.get("target"):
+        return reject("proposal_target_does_not_match_command")
+    proposal_grounding = proposal.get("grounding")
+    recomputed_grounding = recomputed.get("grounding")
+    if not isinstance(proposal_grounding, Mapping) or not isinstance(recomputed_grounding, Mapping):
+        return reject("proposal_grounding_missing")
+    for field in ("status", "entity_id", "entity_name"):
+        if proposal_grounding.get(field) != recomputed_grounding.get(field):
+            return reject("proposal_grounding_does_not_match_command")
+
+    allowed_intents = {"tactical_attack", "tactical_defend", "heal_request", "help_request"}
     if intent not in allowed_intents:
         return reject("unsupported_proposal_intent")
 
