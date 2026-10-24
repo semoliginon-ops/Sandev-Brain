@@ -33,6 +33,8 @@ Recent events and retrieved memories are included only when their provenance is 
 
 `intent.py` exposes `classify_intent(message, context=None)`. It normalizes case and punctuation plus a few casual Indonesian spellings, then matches an auditable set of phrases. Current labels include greeting, thanks, farewell, help request, danger, healing, tactical attack/defense, comfort, and banter. It returns a matched phrase and rule-match strength, or fails closed as `unknown`/`ambiguous`.
 
+`intent_benchmark.py` provides a small, hand-authored regression set covering known phrases, unsupported messages, and ambiguity. Run it with `PYTHONPATH=sandev_core python -m intent_benchmark`. This is a sanity check, not a held-out or independent intelligence evaluation.
+
 The current interpreter is intentionally narrow: match strength is not a calibrated probability, game context is metadata only, and it does not reliably understand negation, sarcasm, indirect requests, or unseen phrasing. A context-only guess is not made. Expand it with reviewed examples and evaluate on a held-out set before making stronger language-understanding claims.
 
 `language.py` selects among authored response patterns using the intent label supplied by the interpreter/caller. It can filter by game, trusted context tags, and urgent needs, with a deterministic tie-break and safe no-match result. This selector does not generate new sentences. Open-ended companion chat, spontaneous dialogue, broad Indonesian fluency, and personality consistency are not yet demonstrated.
@@ -51,9 +53,10 @@ Run from the repository root:
 PYTHONPATH=sandev_core python -m unittest discover -s sandev_core -v
 PYTHONPATH=smollm python -m unittest discover -s smollm -v
 PYTHONPATH=sandev_core python -m sandev_core.benchmark
+PYTHONPATH=sandev_core python -m intent_benchmark
 ```
 
-The small benchmark uses hand-authored regression labels. It is not an independent intelligence measurement.
+The game benchmark and intent regression set use hand-authored labels. Neither is an independent intelligence measurement.
 
 ## Language is a core goal
 
