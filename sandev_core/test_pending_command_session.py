@@ -1,4 +1,5 @@
 import unittest
+from threading import Event, Thread
 
 from pending_actions import PendingActionRegistry
 from pending_command_session import PendingCommandSession
@@ -152,6 +153,70 @@ class PendingCommandSessionTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertFalse(result["execution_confirmed"])
         self.assertEqual(self.registry.get(proposal["action_id"], "player-1")["status"], "failed")
+
+    def test_state_version_lookup_error_cancels_proposal_without_engine_call(self):
+        proposal = self.handle("Serang Goblin", version="v3")
+        calls = []
+
+        def broken_version():
+            raise RuntimeError("state snapshot unavailable")
+
+        result = self.session.execute_pending(
+            "player-1",
+            proposal["action_id"],
+            get_current_state_version=broken_version,
+            engine_execute_if_version_matches=lambda payload, version: calls.append(True) or {"confirmed": True},
+        )
+        self.assertFalse(result["accepted"])
+        self.assertFalse(result["execution_confirmed"])
+        self.assertEqual(result["reason"], "current_state_version_unavailable")
+        self.assertEqual(calls, [])
+        self.assertEqual(self.registry.get(proposal["action_id"], "player-1")["status"], "cancelled")
+
+    def test_new_message_waits_until_execution_boundary_finishes(self):
+        proposal = self.handle("Serang Goblin", version="v3")
+        engine_entered = Event()
+        release_engine = Event()
+        cancel_finished = Event()
+        execution_result = []
+        cancel_result = []
+
+        def engine(payload, expected_version):
+            engine_entered.set()
+            if not release_engine.wait(timeout=3):
+                raise TimeoutError("test did not release engine callback")
+            return {"confirmed": True, "result": {"damage": 5}}
+
+        def execute():
+            execution_result.append(self.session.execute_pending(
+                "player-1",
+                proposal["action_id"],
+                get_current_state_version=lambda: "v3",
+                engine_execute_if_version_matches=engine,
+            ))
+
+        def cancel():
+            cancel_result.append(self.handle("Batal"))
+            cancel_finished.set()
+
+        execution_thread = Thread(target=execute)
+        execution_thread.start()
+        self.assertTrue(engine_entered.wait(timeout=2), "engine callback was not entered")
+        cancel_thread = Thread(target=cancel)
+        cancel_thread.start()
+        try:
+            self.assertFalse(cancel_finished.wait(timeout=0.1), "message handling should wait on the session lock")
+        finally:
+            release_engine.set()
+            execution_thread.join(timeout=3)
+            cancel_thread.join(timeout=3)
+
+        self.assertFalse(execution_thread.is_alive(), "execution thread did not finish")
+        self.assertFalse(cancel_thread.is_alive(), "message thread did not finish")
+        self.assertTrue(execution_result[0]["execution_confirmed"])
+        self.assertEqual(self.registry.get(proposal["action_id"], "player-1")["status"], "completed")
+        self.assertEqual(cancel_result[0]["status"], "cancelled")
+        self.assertNotIn(proposal["action_id"], cancel_result[0]["cancelled_action_ids"])
 
     def test_state_version_is_stored_for_execution_gate(self):
         result = self.handle("Serang Goblin", version="world-7")
