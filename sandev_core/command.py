@@ -78,7 +78,7 @@ def interpret_player_command(
         isinstance(grounded_name, str)
         and bool(grounded_name)
         and re.search(
-            r"(?<!\\w)" + re.escape(normalize_text(grounded_name)) + r"(?!\\w)",
+            r"(?<!\w)" + re.escape(normalize_text(grounded_name)) + r"(?!\w)",
             normalized,
         )
     )
