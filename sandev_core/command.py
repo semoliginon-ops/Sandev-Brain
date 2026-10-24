@@ -96,6 +96,22 @@ def interpret_player_command(
             "reason": "question_or_action_alternative_requires_clarification",
             "execution_allowed": False,
         }
+    # Do not let the explicit-verb fallback turn a quoted/recounted mention or
+    # future intention into an immediate command. This classifier does not support
+    # scheduling actions, so those cases must remain non-actionable.
+    if interpretation.get("reason") in {
+        "conversational_mention_is_not_an_action_order",
+        "stated_intention_is_not_an_immediate_action_order",
+    }:
+        return {
+            "status": "not_a_confident_action",
+            "intent": "unknown",
+            "target": None,
+            "grounding": grounding,
+            "reason": interpretation["reason"],
+            "execution_allowed": False,
+        }
+
     # If a direct attack command contains a negation anywhere, abstain rather than
     # guessing its scope (e.g. "Serang Goblin, jangan").
     if explicit_attack and any(word in {"tidak", "jangan", "bukan", "belum", "tak", "enggan"} for word in normalized.split()):
