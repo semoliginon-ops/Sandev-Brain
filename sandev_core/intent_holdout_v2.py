@@ -1,4 +1,4 @@
-"""Fresh Indonesian intent holdout, authored after development-set changes.
+"""Intent holdout v2, now inspected and therefore diagnostic only.
 
 Do not tune rules against this set. Its first score is a one-time, small manual
 check only; once results are inspected, preserve it as a reported benchmark
@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from intent import classify_intent
 
-# Frozen before the first evaluation; distinct wording from both existing
+# Originally frozen before first evaluation; now inspected. Distinct wording from both existing
 # diagnostic sets and intent_dev_eval.CASES.
 CASES: tuple[tuple[str, str], ...] = (
     ("Selamat pagi, semoga harimu menyenangkan", "greeting"),
