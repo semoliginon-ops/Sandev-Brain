@@ -14,38 +14,40 @@ SANDEV Brain is intended to be a reusable game-intelligence system that is also 
 Game world state + player input
           |
           v
-Context assembler ----> Structured persistent memory
-          |                      |
-          +----------+-----------+
-                     v
-           +---------+----------+
-           |                    |
-           v                    v
- Language/dialogue       Goal / need evaluator
- behavior                         |
-           |                      v
-           v             Decision and action planner
-    Game-facing reply              |
-                          Generic action intent
-                                   |
-                                   v
-                           Genre adapter contract
-                                   |
-                                   v
-                         Latest-state revalidation
-                                   |
-                                   v
-                          Authoritative game engine
-                                   |
-                                   v
-                          Confirmed world outcome
-                                   |
-                                   +----> memory/feedback
+Bounded context assembler ----> Verified persistent memory
+          |                            |
+          +--------------+-------------+
+                         v
+              +----------+----------+
+              |                     |
+              v                     v
+       Language/dialogue      Goal / need evaluator
+          behavior                    |
+              |                       v
+              v              Decision and action planner
+       Game-facing reply               |
+                              Generic action intent
+                                       |
+                                       v
+                              Genre adapter contract
+                                       |
+                                       v
+                            Latest-state revalidation
+                                       |
+                                       v
+                             Authoritative game engine
+                                       |
+                                       v
+                             Confirmed world outcome
+                                       |
+                                       +----> memory/feedback
 ```
 
 ## Current implementation: deterministic decision baseline
 
 `sandev_core/brain.py` scores adapter-provided candidates against need urgency and goals, enforces the allow-list and preconditions, provides explanations, and returns an empty intent when nothing is feasible. `sandev_core/adapter.py` validates a versioned generic snapshot contract across genres. `sandev_core/engine_bridge.py` rechecks candidate identity, allow-list, preconditions, and optional state version before returning a validated proposal. None of these modules executes actions or mutates world state.
+
+`sandev_core/context.py` assembles current state, goals, the raw player message, recent provenance-checked events, and trusted retrieved memories into a bounded JSON-safe packet. This is context preparation, not natural-language understanding or generation. It marks the player message as uninterpreted input so later modules cannot mistake raw text for a verified fact.
 
 This is a transparent baseline, not general intelligence. It still depends on game integrations to provide structured state and candidate actions.
 
@@ -66,7 +68,7 @@ The same core contract can represent RPG actions (talk, explore, equip, attack, 
 
 ## Memory and truth
 
-Separate durable facts, recent events, inferred preferences, and uncertain beliefs. Record provenance and confidence where useful. Teacher-generated suggestions are not game truth; only confirmed engine events or explicitly approved player facts may become durable facts.
+Separate durable facts, recent events, inferred preferences, and uncertain beliefs. Record provenance and confidence where useful. Teacher-generated suggestions are not game truth; only confirmed engine events or explicitly approved player facts may become durable facts. The context assembler filters history by provenance, but comprehensive contradiction handling, privacy controls, retention, and forgetting policies are still future work.
 
 ## Evaluation gates
 
