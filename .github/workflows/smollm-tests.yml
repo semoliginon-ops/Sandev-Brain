@@ -1,0 +1,30 @@
+name: SANDEV Brain Tests
+on:
+  push:
+    paths:
+      - "smollm/**"
+      - "sandev_core/**"
+      - ".github/workflows/smollm-tests.yml"
+  pull_request:
+    paths:
+      - "smollm/**"
+      - "sandev_core/**"
+      - ".github/workflows/smollm-tests.yml"
+jobs:
+  runtime-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Test independent core without model weights
+        run: PYTHONPATH=sandev_core python -m unittest discover -s sandev_core -v
+      - name: Test teacher research harness without downloading model weights
+        run: PYTHONPATH=smollm python -m unittest discover -s smollm -v
+      - name: Evaluate Indonesian intent development dataset (CI gate)
+        run: PYTHONPATH=sandev_core python -m intent_dev_eval --min-accuracy 0.70
+      - name: Report intent holdout v2 (now diagnostic; do not tune against this score)
+        run: PYTHONPATH=sandev_core python -m intent_holdout_v2
+      - name: Report older Indonesian intent diagnostic (not a pristine holdout)
+        run: PYTHONPATH=sandev_core python -m heldout_intent_eval
