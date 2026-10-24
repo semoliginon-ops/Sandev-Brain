@@ -71,8 +71,7 @@ def interpret_player_command(
     # Questions and alternatives are not execution instructions, even when they
     # begin with an imperative verb ("Serang Goblin atau bertahan?").
     has_conflicting_named_pronoun = (
-        grounding["status"] == "grounded"
-        and re.search(r"\\b(dia|dirinya)\\b", normalized)
+        re.search(r"\\b(dia|dirinya)\\b", normalized)
         and "atau" in normalized.split()
     )
     if ("?" in message or ("atau" in normalized.split() and not has_conflicting_named_pronoun)) and (explicit_attack or explicit_defend):
