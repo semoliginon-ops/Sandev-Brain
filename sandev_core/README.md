@@ -38,7 +38,7 @@ Recent events and retrieved memories are included only when their provenance is 
 
 `intent_benchmark.py` provides a small, hand-authored regression set covering known phrases, unsupported messages, and ambiguity. Run it with `PYTHONPATH=sandev_core python -m intent_benchmark`. This is a sanity check, not a held-out or independent intelligence evaluation.
 
-`intent_eval.py` adds a separate Indonesian paraphrase challenge set with per-intent breakdown and mismatch details. Run it with `PYTHONPATH=sandev_core python -m intent_eval`. It is diagnostic and reports the actual score rather than failing or hiding weak results. The set is manually authored and must not be called a truly independent or permanently held-out test; if it is used to tune rules, create a fresh untouched evaluation set before claiming generalization.
+`intent_eval.py` adds an Indonesian paraphrase challenge set with per-intent breakdown and mismatch details. Run it with `PYTHONPATH=sandev_core python -m intent_eval`. It is diagnostic and reports the actual score rather than failing or hiding weak results. This set has been used during rule iteration, so it is a development diagnostic—not a held-out test. Create a fresh, untouched set before making claims about generalization.
 
 The current interpreter is intentionally narrow: match strength is not a calibrated probability, game context is metadata only, and it does not reliably understand complex negation, sarcasm, indirect requests, or unseen phrasing. A context-only guess is not made. Expand it with reviewed examples and evaluate on a held-out set before making stronger language-understanding claims.
 
