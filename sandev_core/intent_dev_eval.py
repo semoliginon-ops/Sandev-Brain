@@ -46,7 +46,7 @@ CASES: tuple[tuple[str, str], ...] = (
     ("Berapa hasil tujuh dikali delapan?", "unknown"),
     ("Ceritakan fakta tentang planet Saturnus", "unknown"),
     ("Apakah kamu suka warna biru?", "unknown"),
-    ("Jangan menyerang dulu, tunggu aba-abaku", "unknown"),
+    ("Jangan menyerang dulu, tunggu aba-abaku", "tactical_defend"),
     ("Menurutmu menyerang atau bertahan lebih baik?", "unknown"),
 )
 
