@@ -36,9 +36,9 @@ def normalize_text(text: str) -> str:
     if not isinstance(text, str):
         raise IntentInputError("message must be a string")
     value = unicodedata.normalize("NFKC", text).casefold().strip()
-    value = re.sub(r"[^\w\w-]", " ", value, flags=re.UNICODE)
-    value = re.sub(r"\w+", " ", value).strip()
-    value = re.sub(r"\w(nggak|enggak|gak|ga)\w", "tidak", value)
+    value = re.sub(r"[^\w\s-]", " ", value, flags=re.UNICODE)
+    value = re.sub(r"\s+", " ", value).strip()
+    value = re.sub(r"\b(nggak|enggak|gak|ga)\b", "tidak", value)
     return value
 
 
