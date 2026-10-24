@@ -1,6 +1,7 @@
 import unittest
 
 from intent import IntentInputError, classify_intent, normalize_text
+from intent_benchmark import run_benchmark
 
 
 class IndonesianIntentTests(unittest.TestCase):
@@ -48,6 +49,10 @@ class IndonesianIntentTests(unittest.TestCase):
     def test_does_not_guess_from_context_only(self):
         result = classify_intent("hmm...", context={"game_id": "rpg", "needs": {"health": 99}})
         self.assertEqual(result["intent"], "unknown")
+
+    def test_hand_authored_regression_benchmark(self):
+        report = run_benchmark()
+        self.assertEqual(report["correct"], report["total"], report["rows"])
 
 
 if __name__ == "__main__":
