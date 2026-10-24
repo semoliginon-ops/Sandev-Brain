@@ -219,6 +219,31 @@ def interpret_player_command(
             "reason": "explicit_defend_verb",
         }
 
+    # Keep the returned envelope synchronized with any conservative imperative
+    # fallback and with the target grounding already computed above.
+    if interpretation.get("status") == "matched" and interpretation.get("intent") in _ACTION_INTENTS:
+        language_envelope.update({
+            "intent": interpretation["intent"],
+            "intent_status": "matched",
+            "reason": interpretation.get("reason", language_envelope.get("reason")),
+            "speech_act": "command",
+            "temporal_scope": "immediate",
+        })
+        if grounding.get("status") == "grounded":
+            language_envelope.update({
+                "needs_clarification": False,
+                "clarification_reason": None,
+            })
+        else:
+            language_envelope.update({
+                "needs_clarification": True,
+                "clarification_reason": (
+                    "target_reference_is_ambiguous"
+                    if grounding.get("status") == "ambiguous"
+                    else "action_target_requires_current_engine_grounding"
+                ),
+            })
+
     if interpretation["status"] != "matched" or interpretation["intent"] not in _ACTION_INTENTS:
         return {
             "status": "not_a_confident_action",
