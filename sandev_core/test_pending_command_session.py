@@ -59,6 +59,19 @@ class PendingCommandSessionTests(unittest.TestCase):
         self.assertIn(old["action_id"], result["invalidated_action_ids"])
         self.assertEqual(self.registry.get(old["action_id"], "player-1")["status"], "cancelled")
 
+    def test_cancel_command_is_case_insensitive_and_accepts_polite_prefix(self):
+        old = self.handle("Serang Goblin")
+        result = self.handle("Tolong batalkan perintah sebelumnya")
+        self.assertEqual(result["status"], "cancelled")
+        self.assertIn(old["action_id"], result["cancelled_action_ids"])
+
+    def test_jangan_lupa_is_not_misclassified_as_explicit_cancellation(self):
+        old = self.handle("Serang Goblin")
+        result = self.handle("Jangan lupa serang Goblin")
+        self.assertNotEqual(result["status"], "cancelled")
+        self.assertIn(old["action_id"], result["invalidated_action_ids"])
+        self.assertEqual(self.registry.get(old["action_id"], "player-1")["status"], "cancelled")
+
     def test_non_action_chat_also_invalidates_old_pending_proposal(self):
         old = self.handle("Serang Goblin")
         result = self.handle("Halo, apa kabar?")
