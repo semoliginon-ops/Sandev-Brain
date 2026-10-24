@@ -154,5 +154,26 @@ class MultiStepPlannerTests(unittest.TestCase):
         self.assertEqual(result["reason"], "action_target_required")
 
 
+    def test_step_revalidation_rejects_tampered_supported_intent(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        plan["steps"][0]["proposal"]["intent"] = "tactical_defend"
+        result = validate_plan_step(plan, 1, ENTITIES, current_state_version=17)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "proposal_intent_does_not_match_command")
+
+    def test_step_revalidation_rejects_tampered_command(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        plan["steps"][0]["command"] = "Serang Goblin"
+        result = validate_plan_step(plan, 1, ENTITIES, current_state_version=17)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "proposal_target_does_not_match_command")
+
+
 if __name__ == "__main__":
     unittest.main()
