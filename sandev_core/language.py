@@ -56,7 +56,10 @@ def select_response(
         raise LanguageInputError("context.game_id must be a string")
 
     needs: set[str] = set()
-    for key, value in state.items():
+    explicit_needs = context.get("needs", {})
+    if not isinstance(explicit_needs, Mapping):
+        raise LanguageInputError("context.needs must be an object")
+    for key, value in explicit_needs.items():
         if isinstance(key, str) and isinstance(value, (int, float)) and not isinstance(value, bool):
             if 0 <= value <= 100 and value >= 70:
                 needs.add(key)
