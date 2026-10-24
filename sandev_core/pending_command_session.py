@@ -16,7 +16,7 @@ from pending_actions import PendingActionRegistry
 _CANCEL_PREFIX = re.compile(
     r"^(?:batal(?:kan)?|cancel(?:led)?|stop|hentikan|"
     r"jangan(?:\s+dulu)?|batalkan perintah(?:nya)?)\b"
-)
+, flags=re.IGNORECASE)
 
 
 class PendingCommandSession:
