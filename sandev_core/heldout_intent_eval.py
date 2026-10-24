@@ -1,7 +1,7 @@
-"""Fresh untouched Indonesian intent evaluation set.
+"""Initial Indonesian intent diagnostic set.
 
-Do not use these examples to tune intent rules. They are a small manually
-authored holdout, not statistically representative. Report the score honestly;
+This set has been inspected for diagnostics and is no longer a pristine holdout.
+It is small and manually authored, not statistically representative. Report honestly;
 unknown/ambiguous predictions count as incorrect for an expected intent.
 Run: PYTHONPATH=sandev_core python -m heldout_intent_eval
 """
@@ -11,8 +11,8 @@ from collections import Counter, defaultdict
 from intent import classify_intent
 
 
-# Deliberately separate from intent_eval.CASES. Keep this set untouched during
-# rule iteration; if used for tuning, replace it with a newly authored set.
+# Separate from intent_eval.CASES. Since its report has been inspected, treat it
+# as a diagnostic set and author a new holdout before generalization claims.
 CASES: tuple[tuple[str, str], ...] = (
     ("Pagi, partner!", "greeting"),
     ("Akhirnya kita berjumpa lagi", "greeting"),
@@ -92,7 +92,7 @@ def run_evaluation() -> dict[str, object]:
 def main() -> int:
     report = run_evaluation()
     print(
-        "Fresh Indonesian holdout (manual, non-representative): "
+        "Indonesian intent diagnostic (manual, non-representative): "
         f"{report['correct']}/{report['total']} ({report['accuracy']:.1%})"
     )
     print(f"Statuses: {report['status_counts']}")
