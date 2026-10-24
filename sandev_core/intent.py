@@ -113,6 +113,15 @@ def classify_intent(
                 "matched_phrase": None, "normalized_message": normalized, "game_id": game_id,
                 "reason": "no_supported_phrase_match_or_negated"}
 
+    # A choice question mentioning an action is not itself an instruction.
+    # Fail closed rather than treating one option as a command.
+    if "?" in message and re.search(r"\batau\b", normalized) and any(
+        intent in scores for intent in ("tactical_attack", "tactical_defend")
+    ):
+        return {"status": "ambiguous", "intent": "unknown", "confidence": 0.0,
+                "matched_phrase": None, "normalized_message": normalized, "game_id": game_id,
+                "reason": "action_choice_question_requires_clarification"}
+
     best_score, best_intent, best_phrase = ranked[0]
     second_score = ranked[1][0] if len(ranked) > 1 else 0.0
     if best_score < min_confidence:
