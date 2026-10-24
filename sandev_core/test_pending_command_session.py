@@ -227,5 +227,67 @@ class PendingCommandSessionTests(unittest.TestCase):
         self.assertEqual(authorization["reason"], "state_version_changed")
 
 
+    def test_cancel_wins_before_execution_and_engine_is_never_called(self):
+        proposal = self.handle("Serang Goblin", version="v5")
+        cancelled = self.handle("Batal", version="v5")
+        self.assertIn(proposal["action_id"], cancelled["cancelled_action_ids"])
+        calls = []
+        result = self.session.execute_pending(
+            "player-1",
+            proposal["action_id"],
+            get_current_state_version=lambda: "v5",
+            engine_execute_if_version_matches=lambda payload, version: calls.append(True)
+            or {"confirmed": True, "result": {}},
+        )
+        self.assertFalse(result["accepted"])
+        self.assertFalse(result["execution_confirmed"])
+        self.assertEqual(calls, [])
+        self.assertEqual(
+            self.registry.get(proposal["action_id"], "player-1")["status"],
+            "cancelled",
+        )
+
+    def test_two_concurrent_execute_attempts_reach_engine_only_once(self):
+        proposal = self.handle("Serang Goblin", version="v6")
+        engine_entered = Event()
+        release_engine = Event()
+        results = []
+        calls = []
+
+        def engine(payload, expected_version):
+            calls.append(expected_version)
+            engine_entered.set()
+            if not release_engine.wait(timeout=3):
+                raise TimeoutError("test did not release engine callback")
+            return {"confirmed": True, "result": {"damage": 7}}
+
+        def execute():
+            results.append(self.session.execute_pending(
+                "player-1",
+                proposal["action_id"],
+                get_current_state_version=lambda: "v6",
+                engine_execute_if_version_matches=engine,
+            ))
+
+        first = Thread(target=execute)
+        second = Thread(target=execute)
+        first.start()
+        self.assertTrue(engine_entered.wait(timeout=2), "engine callback was not entered")
+        second.start()
+        try:
+            self.assertEqual(len(calls), 1, "second attempt must wait behind the session lock")
+        finally:
+            release_engine.set()
+            first.join(timeout=3)
+            second.join(timeout=3)
+
+        self.assertFalse(first.is_alive(), "first execution thread did not finish")
+        self.assertFalse(second.is_alive(), "second execution thread did not finish")
+        self.assertEqual(len(calls), 1, "the engine must receive at most one execution call")
+        self.assertEqual(sum(bool(item["execution_confirmed"]) for item in results), 1)
+        self.assertEqual(sum(bool(item["accepted"]) for item in results), 1)
+        self.assertEqual(self.registry.get(proposal["action_id"], "player-1")["status"], "completed")
+
+
 if __name__ == "__main__":
     unittest.main()
