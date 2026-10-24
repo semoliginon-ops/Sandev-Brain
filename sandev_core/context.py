@@ -80,6 +80,9 @@ def build_context(
     if state_size > max_state_bytes:
         raise ContextInputError("snapshot.state exceeds the configured byte limit")
 
+    needs = _json_copy(snapshot.get("needs", {}), "needs")
+    if not isinstance(needs, dict):
+        raise ContextInputError("snapshot.needs must be an object")
     goals = _json_copy(snapshot.get("goals", []), "goals")
     if not isinstance(goals, list):
         raise ContextInputError("snapshot.goals must be a list")
@@ -119,6 +122,7 @@ def build_context(
         "actor_id": actor_id,
         "state_version": snapshot.get("state_version"),
         "state": state,
+        "needs": needs,
         "goals": goals,
         "player_message": player_message,
         "player_message_status": "raw_uninterpreted_input",
