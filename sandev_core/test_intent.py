@@ -65,6 +65,27 @@ class IndonesianIntentTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assertEqual(classify_intent(message)["intent"], expected)
 
+
+    def test_recognizes_more_natural_indonesian_paraphrases(self):
+        cases = {
+            "Pagi, partner!": "greeting",
+            "Akhirnya kita berjumpa lagi": "greeting",
+            "Aku harus pamit sekarang": "farewell",
+            "Nanti kita lanjut lagi, ya": "farewell",
+            "Bisa tolong urus masalah ini bareng aku?": "help_request",
+            "Aku butuh bantuanmu untuk menyelesaikannya": "help_request",
+            "Posisi kita sedang dikepung!": "danger",
+            "Ada yang mengincar kita dari arah belakang": "danger",
+            "Aku hampir tumbang, cepat pulihkan aku": "heal_request",
+            "Bisa pakai ramuan untuk memulihkan kondisiku?": "heal_request",
+            "Jadikan musuh itu sasaran utama": "tactical_attack",
+        }
+        for message, expected in cases.items():
+            with self.subTest(message=message):
+                result = classify_intent(message)
+                self.assertEqual(result["status"], "matched", result)
+                self.assertEqual(result["intent"], expected, result)
+
     def test_negated_healing_request_is_not_a_heal_command(self):
         result = classify_intent("Jangan obati aku dulu, aku masih kuat")
         self.assertEqual(result["status"], "unknown")
