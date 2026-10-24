@@ -70,13 +70,13 @@ def interpret_player_command(
     explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\b", normalized)
     # Questions and alternatives are not execution instructions, even when they
     # begin with an imperative verb ("Serang Goblin atau bertahan?").
-    if "?" in message and (explicit_attack or explicit_defend):
+    if ("?" in message or "atau" in normalized.split()) and (explicit_attack or explicit_defend):
         return {
             "status": "not_a_confident_action",
             "intent": "unknown",
             "target": None,
             "grounding": grounding,
-            "reason": "question_requires_confirmation",
+            "reason": "question_or_action_alternative_requires_clarification",
             "execution_allowed": False,
         }
     # If a direct attack command contains a negation anywhere, abstain rather than
