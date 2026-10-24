@@ -182,8 +182,8 @@ def classify_intent(
     # cue (e.g. "aku butuh potion, tapi jangan dulu"). Do not keep the
     # earlier action label when the sentence explicitly retracts it.
     if (
-        re.search(r"\\b(tapi|tetapi|namun|cuma)\\b", normalized)
-        and re.search(r"\\b(jangan|tidak|belum|tak|enggan)\\b", normalized)
+        re.search(r"\b(tapi|tetapi|namun|cuma)\b", normalized)
+        and re.search(r"\b(jangan|tidak|belum|tak|enggan)\b", normalized)
         and any(intent in scores for intent in ("tactical_attack", "heal_request"))
     ):
         return {"status": "unknown", "intent": "unknown", "confidence": 0.0,
