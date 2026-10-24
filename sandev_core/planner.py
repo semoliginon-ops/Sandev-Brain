@@ -192,6 +192,11 @@ def validate_plan_step(
     if not isinstance(command, str) or not command.strip():
         return reject("step_command_missing")
 
+    allowed_intents = {"tactical_attack", "tactical_defend", "heal_request", "help_request"}
+    intent = proposal.get("intent")
+    if intent not in allowed_intents:
+        return reject("unsupported_proposal_intent")
+
     # Re-interpret the original step against the current entity snapshot.
     # Do not trust mutable plan fields as the source of intent/target truth.
     try:
@@ -200,7 +205,6 @@ def validate_plan_step(
         return reject("step_command_cannot_be_revalidated")
     if recomputed.get("status") != "proposal":
         return reject("step_command_no_longer_resolves")
-    intent = proposal.get("intent")
     if intent != recomputed.get("intent"):
         return reject("proposal_intent_does_not_match_command")
     if proposal.get("target") != recomputed.get("target"):
@@ -212,10 +216,6 @@ def validate_plan_step(
     for field in ("status", "entity_id", "entity_name"):
         if proposal_grounding.get(field) != recomputed_grounding.get(field):
             return reject("proposal_grounding_does_not_match_command")
-
-    allowed_intents = {"tactical_attack", "tactical_defend", "heal_request", "help_request"}
-    if intent not in allowed_intents:
-        return reject("unsupported_proposal_intent")
 
     target = proposal.get("target")
     if intent in {"tactical_attack", "tactical_defend"} and target is None:
