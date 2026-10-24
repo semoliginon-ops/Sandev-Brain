@@ -41,6 +41,32 @@ class IntentDevelopmentEvaluationTests(unittest.TestCase):
         self.assertIn(result["status"], {"unknown", "ambiguous"})
         self.assertEqual(result["intent"], "unknown")
 
+    def test_compositional_fallback_abstains_on_mixed_or_unsupported_messages(self):
+        from intent import classify_intent
+
+        cases = (
+            "Aku sedih, kasih lelucon lucu dong",
+            "Tolong serang musuh dan pulihkan darahku",
+            "Aku ingin tahu sejarah kerajaan ini",
+        )
+        for message in cases:
+            with self.subTest(message=message):
+                self.assertEqual(classify_intent(message)["intent"], "unknown")
+
+    def test_negated_paraphrases_never_become_compositional_actions(self):
+        from intent import classify_intent
+
+        cases = (
+            "Jangan lumpuhkan penyerang",
+            "Tidak perlu menyerbu gerombolan itu",
+            "Aku tidak ingin bertahan di sisi utara",
+        )
+        for message in cases:
+            with self.subTest(message=message):
+                result = classify_intent(message)
+                self.assertEqual(result["intent"], "unknown")
+                self.assertNotEqual(result["status"], "matched")
+
     def test_evaluation_reports_all_examples_and_mismatches(self):
         report = run_evaluation()
         self.assertEqual(report["total"], len(CASES))
