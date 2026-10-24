@@ -138,6 +138,17 @@ class IndonesianIntentTests(unittest.TestCase):
                 self.assertEqual(result["intent"], "unknown", result)
                 self.assertEqual(result["status"], "unknown", result)
 
+    def test_stated_future_intention_is_not_an_immediate_command(self):
+        for message in (
+            "Aku mau serang musuh nanti",
+            "Saya ingin serang musuh besok",
+            "Kita akan serang musuh lain waktu",
+        ):
+            with self.subTest(message=message):
+                result = classify_intent(message)
+                self.assertEqual(result["status"], "unknown", result)
+                self.assertEqual(result["intent"], "unknown", result)
+
     def test_rejects_invalid_inputs(self):
         with self.assertRaises(IntentInputError):
             classify_intent(None)
