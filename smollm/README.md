@@ -1,31 +1,32 @@
-# SANDEV Brain — SmolLM2-360M adaptation
+# SmolLM2 research tools for SANDEV Brain
 
-Selected base: HuggingFaceTB/SmolLM2-360M-Instruct. This is one adapted language model for Indonesian conversation, character context, memory use, reasoning, and game-action proposals.
+This folder contains research tools using `HuggingFaceTB/SmolLM2-360M-Instruct` as a **teacher/reference during development**. It does not define the shipped SANDEV Brain runtime.
 
 Official model card: https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct
-Official model/training repository: https://github.com/huggingface/smollm
-The official model card states Apache-2.0. Check all data and artifact licenses before redistribution.
+Official upstream project: https://github.com/huggingface/smollm
+The upstream model card lists Apache-2.0. Check each dataset and output artifact's license separately.
 
-Important limitation: SmolLM2 primarily understands and generates English according to its model card. Indonesian fluency must be taught and evaluated, not assumed.
+## Correct product boundary
 
-## Training
+The final game must **not load the SmolLM model, its weights, or a different local LLM**. It must not require a cloud LLM during gameplay either. The point of this research is to extract useful behavior into a reusable game system: curated dialogue behavior, structured context and memory, goal/need evaluation, planning, action scoring, and game-engine adapters. A small learned component may be considered only if it can run as an ordinary packaged game component without loading an LLM; first establish whether deterministic/compiled components can meet the quality target.
 
-Do not train on the Samsung A05. Use a suitable temporary GPU training environment, then evaluate the adapter and a tested quantized export on the phone. This does not require game-time cloud inference.
+## Files
 
-Install a compatible PyTorch build, then install smollm/requirements.txt. Run: python smollm/train_sft.py --data smollm/data/train.jsonl --output outputs/sandev-smollm2-adapter
+- `data/train.jsonl`: small Indonesian behavior seed set.
+- `data/eval.jsonl`: separate starter evaluation examples.
+- `train_sft.py`: experimental LoRA training of the teacher model. This is research-only and is not the final game build.
+- `sandev_brain.py`: research inference harness and prototype for structured outputs, action validation, and persistent event memory. Do not embed this Python Transformers runtime in the game.
+- `test_runtime.py`: tests JSON parsing, action allow-list, and memory persistence without loading model weights.
 
-The LoRA adapter is not standalone; it requires the same base model unless merged and converted through a tested export pipeline.
+## Research workflow
 
-## Mobile target: Samsung A05, RAM 6 GB
+1. Expand the dataset with diverse Indonesian multi-turn scenarios, character traits, goals, needs, relationships, and world-state constraints.
+2. Use the teacher model in the development environment to propose candidate conversations/decisions; review and label examples. Never accept generated claims as game facts automatically.
+3. Evaluate examples against held-out scenarios and human-defined rubrics.
+4. Convert validated behaviors into the independent SANDEV Brain modules and generic game-action interface.
+5. Run the same scenario suite against the independent system, with the teacher as a comparison baseline only.
+6. Verify the shipped game works with no LLM weights, model download, or network inference.
 
-A 360M model is a plausible on-device candidate. Original BF16 weights are roughly 0.7 GB before runtime and context memory; quantization can reduce storage. Actual peak RAM, speed, heat, and stability on the Samsung A05 are not yet verified. Start with context around 1,024 tokens and at most 96 generated tokens. The Python Transformers runtime is a prototype, not an Android APK.
+## Honest status
 
-## Evaluation gates
-
-1. Indonesian relevance, fluency, and character consistency.
-2. Correct use of supplied context and remembered facts without inventing events.
-3. Reasonable decisions from needs, goals, and constraints.
-4. Valid action rate and successful engine execution rate.
-5. Actual A05 model download size, installed size, peak RAM, cold start, tokens per second, and crash/timeout rate.
-
-The game engine must verify outcomes and only persist confirmed events. Passing parser tests does not prove model quality or mobile readiness.
+The current dataset is only a seed set. Training has not been run and no trained adapter is included. A LoRA adapter alone would still require the base model, so it is not the product we are building. The product is the reusable, model-independent game intelligence system.
