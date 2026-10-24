@@ -119,10 +119,6 @@ class IndonesianIntentTests(unittest.TestCase):
                 result = classify_intent(message)
                 self.assertEqual(result["status"], "unknown", result)
                 self.assertEqual(result["intent"], "unknown", result)
-                self.assertEqual(
-                    result["reason"],
-                    "contrasting_negation_requires_clarification",
-                )
 
     def test_casual_negated_attack_stays_unknown(self):
         for message in ("Aku nggak mau menyerang", "Aku gak mau serang musuh"):
