@@ -12,6 +12,8 @@ and does not call a cloud model.
 - Return deterministic action intents with explanations and rejected-candidate lists.
 - Store only engine-confirmed events and player-approved facts in a structured memory ledger.
 - Retrieve memories by tags and let newer verified facts replace older values.
+- Record engine-confirmed action outcomes and apply bounded, smoothed score nudges
+  to the same action kind in the same tagged context.
 - Run a small, hand-labeled regression benchmark spanning life simulation, shooter,
   and RPG decision cases.
 - Leave world-state changes and action success/failure confirmation to the game engine.
@@ -26,16 +28,20 @@ and optional cost.
 
 Preconditions support exact values and simple conditions: `min`, `max`, `equals`,
 and `not_equals`. Dotted paths address nested state fields. Missing fields fail
-closed. The core only proposes an intent; the adapter/engine must independently
-validate and execute it, then report the confirmed outcome.
+closed. Optional feedback adjustments are keyed by candidate `action_id` and
+clamped to ±20 score points. The core only proposes an intent; the adapter/engine
+must independently validate and execute it, then report the confirmed outcome.
 
 ## Memory trust boundary
 
 The memory ledger accepts only `engine_confirmed` events and `player_approved`
-facts. It deliberately rejects teacher/model-generated suggestions as a trusted
-source. This is a small persistent ledger, not yet a complete belief system:
-advanced contradiction handling, privacy controls, retention policy, and
-relationship-specific memory remain future work.
+facts. The outcome ledger accepts only `engine_confirmed` action results. Both
+deliberately reject teacher/model-generated suggestions as trusted evidence.
+Outcome feedback is isolated to an exact set of context tags and uses smoothing
+plus a minimum-sample confidence ramp, so a single result does not create certainty.
+These are foundations, not a complete belief system: advanced contradiction
+handling, privacy controls, retention policy, and relationship-specific memory
+remain future work.
 
 ## Regression benchmark
 
@@ -60,8 +66,8 @@ general intelligence score.
 
 ## Limits — not yet a finished AI
 
-This is a transparent rule/scoring baseline plus verified memory, not general
-language understanding, not trained intelligence, and not evidence that teacher
-capabilities have been transferred. It still needs structured game state and
-pre-authored candidate actions. Next: broaden the benchmark, test outcome
-feedback and goal conflicts, and build reusable genre adapters before production.
+This is a transparent rule/scoring baseline plus verified memory and conservative
+outcome feedback, not general language understanding, not trained intelligence,
+and not evidence that teacher capabilities have been transferred. It still needs
+structured game state and pre-authored candidate actions. Next: broaden the
+benchmark and build reusable genre adapters before production.
