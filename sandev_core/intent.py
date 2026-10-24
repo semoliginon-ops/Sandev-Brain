@@ -63,6 +63,7 @@ _COMPOSITIONAL_CUES: dict[str, tuple[tuple[str, ...], ...]] = {
     'banter': (('lelucon', 'humor', 'jenaka', 'konyol', 'candaan', 'lucu', 'tertawa', 'ketawa'), ('bikin', 'kasih', 'buat', 'suasana', 'bahan', 'dong', 'ringan')),
 }
 
+
 def _compositional_candidates(normalized: str) -> list[str]:
     """Find intents supported by two cue families, allowing common suffixes."""
     tokens = set(normalized.split())
@@ -144,8 +145,6 @@ def classify_intent(
                 if previous is None or candidate[0] > previous[0] or (candidate[0] == previous[0] and len(candidate[1]) > len(previous[1])):
                     scores[intent] = candidate
 
-    # Mentions and advice questions are conversational context, not action orders.
-    # Avoid turning a quoted/recounted action phrase into an instruction.
     non_command_context = re.search(
         r"\b(cuma cerita|cerita soal|cerita tentang|apa pendapatmu|menurutmu kalau|aku bilang tadi|aku tadi bilang)\b",
         normalized,
@@ -157,7 +156,6 @@ def classify_intent(
                 "matched_phrase": None, "normalized_message": normalized,
                 "game_id": game_id, "reason": "conversational_mention_is_not_an_action_order"}
 
-    # First-person plans describe intent, but do not necessarily authorize an immediate action.
     future_or_intended_action = re.search(
         r"\b(aku|saya|kita)\s+(mau|ingin|akan|berencana)\b|\b(nanti|besok|lain waktu)\b",
         normalized,
@@ -169,17 +167,12 @@ def classify_intent(
                 "matched_phrase": None, "normalized_message": normalized,
                 "game_id": game_id, "reason": "stated_intention_is_not_an_immediate_action_order"}
 
-    # A specific defensive instruction can contain generic help wording
-    # (e.g. "bantu aku berlindung"). Prefer the explicit defensive action
-    # over the broad "bantu aku" help-request cue; this is not action execution.
     defensive_cues = ("berlindung", "bertahan", "mundur", "jaga posisi", "lindungi")
     if "tactical_defend" in scores and "help_request" in scores and any(
         cue in normalized for cue in defensive_cues
     ) and scores["help_request"][1] in {"bantu aku", "bisa bantu aku", "tolong bantu"}:
         del scores["help_request"]
 
-    # If the message contains evidence for multiple different intent families,
-    # abstain even when only one family happened to match an exact phrase.
     has_negation = any(word in _NEGATIONS for word in normalized.split())
     composed = [] if has_negation else _compositional_candidates(normalized)
     if len(composed) > 1:
@@ -192,8 +185,6 @@ def classify_intent(
         key=lambda item: (-item[0], item[1]),
     )
     if not ranked:
-        # Conservative compositional fallback: two cue families, no negation.
-        has_negation = any(word in _NEGATIONS for word in normalized.split())
         inferred = None if has_negation else _compositional_intent(normalized)
         if inferred and not ("?" in message and "atau" in normalized.split() and inferred in {"tactical_attack", "tactical_defend"}):
             return {"status": "matched", "intent": inferred, "confidence": 0.80,
@@ -203,9 +194,6 @@ def classify_intent(
                 "matched_phrase": None, "normalized_message": normalized, "game_id": game_id,
                 "reason": "no_supported_phrase_match_or_negated"}
 
-    # A later contrastive negation can cancel an earlier positive action
-    # cue (e.g. "aku butuh potion, tapi jangan dulu"). Do not keep the
-    # earlier action label when the sentence explicitly retracts it.
     if (
         re.search(r"\b(tapi|tetapi|namun|cuma)\b", normalized)
         and re.search(r"\b(jangan|tidak|belum|tak|enggan)\b", normalized)
@@ -215,8 +203,6 @@ def classify_intent(
                 "matched_phrase": None, "normalized_message": normalized,
                 "game_id": game_id, "reason": "contrasting_negation_requires_clarification"}
 
-    # A choice question mentioning an action is not itself an instruction.
-    # Fail closed rather than treating one option as a command.
     if "?" in message and re.search(r"\batau\b", normalized) and any(
         intent in scores for intent in ("tactical_attack", "tactical_defend")
     ):
@@ -236,3 +222,85 @@ def classify_intent(
     return {"status": status, "intent": intent, "confidence": best_score if status == "matched" else 0.0,
             "matched_phrase": best_phrase, "normalized_message": normalized, "game_id": game_id,
             "reason": reason}
+
+
+_ACTION_INTENTS = {"tactical_attack", "tactical_defend", "heal_request"}
+_QUESTION_STARTERS = ("apa ", "apakah ", "bagaimana ", "gimana ", "kenapa ", "mengapa ", "kapan ", "siapa ", "di mana ", "dimana ", "perlukah ", "bisakah ", "bolehkah ")
+_CANCEL_CUES = ("batalkan", "batal", "hentikan", "berhenti", "cancel")
+_FUTURE_CUES = ("nanti", "besok", "lain waktu", "minggu depan", "suatu saat")
+
+
+def interpret_message(message: str, *, context: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Return an explicit, non-executable interpretation envelope.
+
+    These fields are conservative heuristic signals, not full grammatical
+    analysis. In particular, 'not_detected' does not prove a message is positive.
+    """
+    normalized = normalize_text(message)
+    result = classify_intent(message, context=context)
+    is_question = "?" in message or normalized.startswith(_QUESTION_STARTERS)
+    has_negation = any(word in _NEGATIONS for word in normalized.split())
+    has_future = any(re.search(r"(?<!\w)" + re.escape(cue) + r"(?!\w)", normalized) for cue in _FUTURE_CUES)
+    has_cancel = any(re.search(r"(?<!\w)" + re.escape(cue) + r"(?!\w)", normalized) for cue in _CANCEL_CUES)
+    reason = result.get("reason", "")
+
+    if has_cancel:
+        speech_act = "cancellation"
+    elif is_question:
+        speech_act = "question"
+    elif reason == "conversational_mention_is_not_an_action_order":
+        speech_act = "mention"
+    elif result.get("status") == "matched" and result.get("intent") in _ACTION_INTENTS:
+        speech_act = "command"
+    elif result.get("status") == "matched":
+        speech_act = "statement"
+    else:
+        speech_act = "unclear"
+
+    if reason == "stated_intention_is_not_an_immediate_action_order" or has_future:
+        temporal_scope = "future_intended"
+    elif reason == "conversational_mention_is_not_an_action_order" or re.search(r"\b(tadi|kemarin|barusan|sebelumnya)\b", normalized):
+        temporal_scope = "past_or_recounted"
+    elif speech_act == "command" and not has_negation:
+        temporal_scope = "immediate"
+    else:
+        temporal_scope = "unspecified"
+
+    if has_negation:
+        negation = "detected"
+    elif any(cue in normalized.split() for cue in ("tanpa", "belum tentu", "tidak pernah")):
+        negation = "uncertain"
+    else:
+        negation = "not_detected"
+
+    needs_clarification = result.get("status") in {"unknown", "ambiguous"} or speech_act in {"question", "unclear", "cancellation", "mention"}
+    if result.get("status") == "ambiguous":
+        clarification_reason = result.get("reason", "ambiguous_message")
+    elif result.get("status") == "unknown":
+        clarification_reason = result.get("reason", "unsupported_message")
+    elif speech_act == "question":
+        clarification_reason = "question_is_not_an_action_order"
+    elif speech_act == "cancellation":
+        clarification_reason = "cancellation_requires_session_or_action_reference"
+    elif speech_act == "mention":
+        clarification_reason = "mentioned_action_is_not_an_order"
+    elif speech_act == "unclear":
+        clarification_reason = "speech_act_unclear"
+    else:
+        clarification_reason = None
+
+    return {
+        "schema_version": "1.0",
+        "speech_act": speech_act,
+        "temporal_scope": temporal_scope,
+        "negation": negation,
+        "intent": result.get("intent", "unknown"),
+        "intent_status": result.get("status", "unknown"),
+        "confidence": result.get("confidence", 0.0),
+        "target_grounding": "unresolved" if result.get("intent") in _ACTION_INTENTS else "not_applicable",
+        "needs_clarification": needs_clarification,
+        "clarification_reason": clarification_reason,
+        "execution_allowed": False,
+        "game_id": result.get("game_id", "unspecified"),
+        "reason": result.get("reason", "unknown"),
+    }
