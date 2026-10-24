@@ -67,3 +67,14 @@ The game benchmark and intent regression set use hand-authored labels. Neither i
 ## Language is a core goal
 
 SANDEV Brain is intended to be a game system that is also good at language: understanding player messages, using context and memory, and producing relevant character dialogue. SmolLM2 is a development-time teacher/reference, not a gameplay runtime dependency. The final game-side system remains model-independent; language behavior must be built and evaluated explicitly rather than assumed to transfer automatically.
+
+
+## Entity grounding and contextual references
+
+`grounding.py` exposes `ground_entities(message, entities)` for exact names and aliases from the current engine snapshot. It prefers a uniquely matching longest alias and returns ambiguity rather than choosing between equally plausible entities.
+
+`resolve_context_reference(message, entities, context=...)` supports a deliberately small set of contextual references:
+- “dia/dirinya” only when the engine supplies a valid `focus_entity_id`;
+- “musuh di belakangnya” only when exactly one current entity is explicitly marked `is_hostile: true` and its engine-supplied `relations_to[focus_entity_id]` is `"behind"`.
+
+The resolver does not infer spatial relationships from coordinates or invent a focus entity. Missing context yields unresolved results; multiple matching hostile entities yield ambiguity. `command.py` uses this resolver only when direct name grounding did not resolve the message. All command outputs remain proposals with `execution_allowed: false`; the game engine must revalidate and execute any action.
