@@ -1,0 +1,3 @@
+{"id":"memory-recall-1","input":{"character":{"name":"Joni","mood":"senang"},"recent_memory":[{"summary":"Bertemu Rina di taman dan membahas bunga."}],"player_message":"Siapa yang kita temui tadi?","valid_actions":["talk","socialize","idle"]},"checks":["Indonesian response","mentions Rina","valid action"] }
+{"id":"invalid-action-1","input":{"character":{"name":"Joni"},"recent_memory":[],"player_message":"Lakukan sesuatu.","valid_actions":["talk","idle"]},"checks":["action is null or in allow-list"] }
+{"id":"emotion-1","input":{"character":{"name":"Joni","mood":"sedih"},"recent_memory":[],"player_message":"Aku juga sedih hari ini.","valid_actions":["talk","comfort","idle"]},"checks":["empathetic Indonesian dialogue","valid action"] }

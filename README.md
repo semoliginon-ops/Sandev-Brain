@@ -1,27 +1,42 @@
 # SANDEV Brain
 
-**Proyek riset kecerdasan mandiri untuk simulasi kehidupan SANDEV Life.**
+**Proyek adaptasi langsung OLMo untuk membangun kecerdasan bahasa SANDEV Life.**
 
-## Tujuan
-Membangun sistem kecerdasan yang dapat berjalan tanpa mewajibkan pemain memasang AI lokal terpisah atau bergantung pada kuota AI cloud.
+Tujuan proyek ini adalah mengadaptasi model OLMo agar memahami percakapan, konteks karakter, memori, emosi, tujuan, dan aksi di dunia game. Arah utamanya adalah satu model bahasa yang diadaptasi untuk SANDEV — bukan sistem hybrid dan bukan sekadar NPC berbasis aturan.
 
-## Fokus Pengembangan
-- Memahami arsitektur dan cara kerja model AI terbuka.
-- Mempelajari kode sumber, bobot model, tokenizer, dan proses pelatihan.
-- Mengembangkan memori karakter dan pemahaman konteks.
-- Membangun sistem penalaran, emosi, tujuan, perencanaan, dan pengambilan keputusan.
-- Membuat karakter yang mampu menjalankan aksi nyata di dalam game.
-- Mengembangkan kemampuan percakapan secara bertahap.
-- Menguji kinerja, penggunaan RAM, ukuran aplikasi, dan kualitas perilaku.
+## Implementasi OLMo
 
-## Referensi Riset
-- OLMo: https://github.com/allenai/OLMo
-- OLMoE: https://github.com/allenai/OLMoE
-- Qwen2.5-0.5B-Instruct: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct
+Folder [`olmo/`](olmo/README.md) berisi pipeline adaptasi awal:
+- Basis model resmi: [allenai/Olmo-3-7B-Instruct](https://huggingface.co/allenai/Olmo-3-7B-Instruct).
+- Supervised fine-tuning dengan LoRA untuk mempelajari perilaku SANDEV Life.
+- Runtime Python yang meminta model menghasilkan dialog, usulan aksi game, dan pembaruan memori dalam JSON.
+- Validasi allow-list agar game hanya menjalankan aksi yang memang tersedia.
+- Data seed dan contoh evaluasi untuk mengawali pengujian.
 
-## Prinsip
-Kode sumber saja tidak otomatis membawa kecerdasan model. Bobot terlatih, tokenizer, data, dan proses pelatihan juga berperan. Setiap komponen pihak ketiga harus diperiksa lisensi dan ketentuan penggunaannya.
+## Brain Core sebelumnya
 
-SANDEV Brain akan dikembangkan melalui eksperimen terukur. Tidak ada klaim kesetaraan dengan model AI lain sebelum diuji.
+`src/index.js` adalah prototipe logika simulasi deterministik yang sudah ada. Ia belum merupakan model bahasa dan bukan hasil adaptasi OLMo. Jalur adaptasi model sekarang dikembangkan di `olmo/`.
 
-**Target awal:** membangun kecerdasan khusus simulasi kehidupan yang mandiri, konsisten, dan dapat menjalankan aksi game dengan andal.
+## Menjalankan tes runtime tanpa memuat bobot model
+
+```bash
+PYTHONPATH=olmo python -m unittest discover -s olmo
+```
+
+Tes ini memeriksa parser dan validasi keluaran, bukan kualitas kecerdasan model.
+
+## Fine-tuning
+
+Lihat [panduan adaptasi OLMo](olmo/README.md). Pelatihan memerlukan Python, dependensi model, checkpoint OLMo, dan komputasi yang memadai. Bobot dasar OLMo 3 7B sekitar 14,6 GB sebelum kebutuhan memori pelatihan; repo ini menyimpan kode dan data contoh, bukan bobot multi-gigabyte.
+
+## Prinsip evaluasi
+
+Belum ada klaim bahwa model SANDEV hasil fine-tuning sudah terlatih atau setara model lain. Data seed saat ini hanya contoh awal. Kita perlu memperbesar dataset, melatih adapter, menguji skenario yang tidak pernah dilihat saat pelatihan, dan mengukur kualitas bahasa, penggunaan konteks, akurasi aksi, latensi, serta memori.
+
+## Referensi resmi
+
+- [OLMo 3 model card](https://huggingface.co/allenai/Olmo-3-7B-Instruct)
+- [OLMo-core: kode training resmi](https://github.com/allenai/OLMo-core)
+- [Dokumentasi model AI2](https://docs.allenai.org/models/olmo/index.html)
+
+Lisensi dan ketentuan penggunaan komponen upstream harus diperiksa sebelum redistribusi.
