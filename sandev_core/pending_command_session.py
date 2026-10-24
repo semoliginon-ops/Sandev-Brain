@@ -54,6 +54,7 @@ class PendingCommandSession:
                 "status": "cancelled",
                 "intent": "cancel_pending",
                 "cancelled_action_ids": invalidated.get("action_ids", []),
+                "invalidated_action_ids": invalidated.get("action_ids", []),
                 "reason": "explicit_player_cancellation",
                 "execution_allowed": False,
             }
