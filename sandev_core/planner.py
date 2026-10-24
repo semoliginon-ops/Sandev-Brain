@@ -151,6 +151,7 @@ def validate_plan_step(
     current_entities: Sequence[Mapping[str, Any]],
     *,
     current_state_version: Any,
+    current_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Revalidate one proposal's snapshot and target before the engine maps it.
 
@@ -179,6 +180,11 @@ def validate_plan_step(
         return reject("stale_plan_state_version")
     if not isinstance(current_entities, (list, tuple)):
         return reject("current_entities_must_be_a_list")
+    if current_context is not None and not isinstance(current_context, Mapping):
+        return reject("current_context_must_be_an_object")
+    if current_context is not None and "state_version" in current_context:
+        if current_context.get("state_version") != current_state_version:
+            return reject("stale_context_state_version")
 
     step = steps[step_index - 1]
     if not isinstance(step, Mapping) or step.get("index") != step_index:
@@ -224,7 +230,7 @@ def validate_plan_step(
     # Re-interpret after structural checks so malformed/removed targets retain
     # precise rejection reasons while mutable plan fields remain untrusted.
     try:
-        recomputed = interpret_player_command(command, current_entities)
+        recomputed = interpret_player_command(command, current_entities, context=current_context)
     except CommandInputError:
         return reject("step_command_cannot_be_revalidated")
     if recomputed.get("status") != "proposal":
