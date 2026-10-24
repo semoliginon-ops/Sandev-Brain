@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping, Sequence
 
-from intent import IntentInputError, normalize_text
+from intent import normalize_text
 
 
 class GroundingInputError(ValueError):
