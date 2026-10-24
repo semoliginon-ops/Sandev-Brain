@@ -54,7 +54,7 @@ class EntityGroundingTests(unittest.TestCase):
     def test_cross_genre_entity_names(self):
         cases = [
             ("plane shooter", "Lindungi pesawat Falcon", [{"id": "ally-1", "name": "Falcon"}], "ally-1"),
-            ("rpg", "Bantu Raka melawan bos", [{"id": "ally-1", "name": "Raka"}, {"id": "boss-1", "name": "Bos"}], None),
+            ("rpg", "Bantu Raka melawan Naga", [{"id": "ally-1", "name": "Raka"}, {"id": "enemy-1", "name": "Naga"}], None),
             ("life sim", "Ajak Budi bicara", [{"id": "npc-1", "name": "Budi"}], "npc-1"),
         ]
         for game_id, message, entities, expected in cases:
