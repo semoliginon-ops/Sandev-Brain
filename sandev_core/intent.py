@@ -178,6 +178,18 @@ def classify_intent(
                 "matched_phrase": None, "normalized_message": normalized, "game_id": game_id,
                 "reason": "no_supported_phrase_match_or_negated"}
 
+    # A later contrastive negation can cancel an earlier positive action
+    # cue (e.g. "aku butuh potion, tapi jangan dulu"). Do not keep the
+    # earlier action label when the sentence explicitly retracts it.
+    if (
+        re.search(r"\\b(tapi|tetapi|namun|cuma)\\b", normalized)
+        and re.search(r"\\b(jangan|tidak|belum|tak|enggan)\\b", normalized)
+        and any(intent in scores for intent in ("tactical_attack", "heal_request"))
+    ):
+        return {"status": "unknown", "intent": "unknown", "confidence": 0.0,
+                "matched_phrase": None, "normalized_message": normalized,
+                "game_id": game_id, "reason": "contrasting_negation_requires_clarification"}
+
     # A choice question mentioning an action is not itself an instruction.
     # Fail closed rather than treating one option as a command.
     if "?" in message and re.search(r"\batau\b", normalized) and any(
