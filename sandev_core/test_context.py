@@ -13,10 +13,6 @@ class ContextPacketTests(unittest.TestCase):
             "Companion covered the player", source="engine_confirmed",
             turn=3, tags=["combat", "companion"], importance=2,
         )
-        ledger.record_event(
-            "Unverified model claim", source="teacher_model",
-            turn=4, tags=["combat"], importance=3,
-        ) if False else None
         ledger.remember_fact(
             "preferred_language", "Indonesian", source="player_approved",
             turn=2, tags=["dialogue"],
