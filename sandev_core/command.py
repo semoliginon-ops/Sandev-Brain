@@ -60,11 +60,28 @@ def interpret_player_command(
                 grounding = contextual
         # Enrich the language envelope with the grounding result produced from
         # the current engine snapshot; never infer a target from language alone.
+        target_status = grounding["status"]
         language_envelope = {
             **language_envelope,
-            "target_grounding": grounding["status"],
+            "target_grounding": target_status,
         }
-        interpretation["target_grounding"] = grounding["status"]
+        if language_envelope.get("intent") in _ACTION_INTENTS:
+            if target_status == "grounded":
+                language_envelope.update({
+                    "needs_clarification": language_envelope.get("intent_status") in {"unknown", "ambiguous"}
+                    or language_envelope.get("speech_act") in {"question", "unclear", "cancellation", "mention"},
+                    "clarification_reason": None,
+                })
+            else:
+                language_envelope.update({
+                    "needs_clarification": True,
+                    "clarification_reason": (
+                        "target_reference_is_ambiguous"
+                        if target_status == "ambiguous"
+                        else "action_target_requires_current_engine_grounding"
+                    ),
+                })
+        interpretation["target_grounding"] = target_status
     except (IntentInputError, GroundingInputError) as exc:
         raise CommandInputError(str(exc)) from exc
 
