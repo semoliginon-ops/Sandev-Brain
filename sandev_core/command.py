@@ -58,6 +58,13 @@ def interpret_player_command(
             contextual = resolve_context_reference(message, entities, context=context)
             if contextual["status"] != "unresolved" or contextual["reason"] != "no_supported_context_reference":
                 grounding = contextual
+        # Enrich the language envelope with the grounding result produced from
+        # the current engine snapshot; never infer a target from language alone.
+        language_envelope = {
+            **language_envelope,
+            "target_grounding": grounding["status"],
+        }
+        interpretation["target_grounding"] = grounding["status"]
     except (IntentInputError, GroundingInputError) as exc:
         raise CommandInputError(str(exc)) from exc
 
