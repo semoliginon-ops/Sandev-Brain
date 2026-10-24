@@ -178,7 +178,16 @@ def interpret_player_command(
             "reason": "negated_explicit_attack_requires_clarification",
             "execution_allowed": False,
         }
-    if interpretation["status"] == "unknown" and explicit_attack:
+    if has_conflicting_named_pronoun and explicit_attack:
+        # Preserve the ambiguity result for a mixed named-target/pronoun choice;
+        # this only lets the explicit ambiguity guard below report the conflict.
+        interpretation = {
+            **interpretation,
+            "status": "matched",
+            "intent": "tactical_attack",
+            "reason": "named_target_conflicts_with_contextual_pronoun",
+        }
+    elif interpretation["status"] == "unknown" and explicit_attack:
         interpretation = {
             **interpretation,
             "status": "matched",
