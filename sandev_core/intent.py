@@ -36,9 +36,9 @@ def normalize_text(text: str) -> str:
     if not isinstance(text, str):
         raise IntentInputError("message must be a string")
     value = unicodedata.normalize("NFKC", text).casefold().strip()
-    value = re.sub(r"[^\\w\\s-]", " ", value, flags=re.UNICODE)
-    value = re.sub(r"\\s+", " ", value).strip()
-    value = re.sub(r"\\b(nggak|enggak|gak|ga)\\b", "tidak", value)
+    value = re.sub(r"[^\${ch}\${ch}-]", " ", value, flags=re.UNICODE)
+    value = re.sub(r"\${ch}+", " ", value).strip()
+    value = re.sub(r"\${ch}(nggak|enggak|gak|ga)\${ch}", "tidak", value)
     return value
 
 
@@ -97,7 +97,7 @@ def classify_intent(
             if pair in seen:
                 raise IntentInputError(f"duplicate intent phrase: {intent}/{normalized_phrase}")
             seen.add(pair)
-            match = re.search(r"(?<!\\w)" + re.escape(normalized_phrase) + r"(?!\\w)", normalized)
+            match = re.search(r"(?<!\${ch})" + re.escape(normalized_phrase) + r"(?!\${ch})", normalized)
             if match and not _is_negated(normalized, match.start()):
                 previous = scores.get(intent)
                 candidate = (float(weight), normalized_phrase)
