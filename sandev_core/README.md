@@ -95,3 +95,5 @@ A plan is returned only when every step resolves confidently. If any step has an
 ### Fresh Indonesian intent holdout
 
 `heldout_intent_eval.py` is a separately authored 30-example diagnostic set, intended to remain untouched while rules are iterated. Run it with `PYTHONPATH=sandev_core python -m heldout_intent_eval`. It reports overall accuracy, per-label accuracy, statuses, and every mismatch. It is still a small manually authored set—not a statistically representative benchmark—and must be replaced with a new holdout if used to tune rules. Unknown predictions count as incorrect for examples with a specific expected intent, so the score does not hide unsupported paraphrases.
+
+The holdout report also includes an expected-to-predicted confusion matrix, so false matches and unsupported paraphrases can be separated instead of relying on one aggregate score. Keep the holdout untouched while diagnosing; do not add its failed examples to rules and then continue calling the same set independent.
