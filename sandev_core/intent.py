@@ -50,6 +50,30 @@ def _is_negated(normalized_message: str, start: int) -> bool:
     )
 
 
+_COMPOSITIONAL_CUES: dict[str, tuple[tuple[str, ...], ...]] = {
+    'greeting': (('halo', 'hai', 'salam', 'selamat datang', 'apa kabar'), ('pagi', 'siang', 'malam', 'bertemu', 'berjumpa', 'kawan', 'teman')),
+    'thanks': (('terima kasih', 'berterima kasih', 'menghargai', 'berutang budi'), ('bantuan', 'pertolongan', 'berarti', 'kebaikan', 'dukungan')),
+    'farewell': (('pamit', 'undur diri', 'pergi', 'berpisah', 'sampai jumpa', 'sampai berjumpa'), ('dulu', 'nanti', 'besok', 'kembali', 'kesempatan lain', 'melanjutkan perjalanan')),
+    'help_request': (('bantu', 'bantuan', 'tolong', 'pertolongan', 'kesulitan', 'kesusahan'), ('selesaikan', 'mengurus', 'mengatasi', 'sendirian', 'membantuku', 'persoalan', 'tugas')),
+    'danger': (('bahaya', 'ancaman', 'terancam', 'celaka', 'tidak aman', 'gawat', 'dikejar'), ('musuh', 'pengejar', 'mengejar', 'mendekat', 'di belakang', 'diserang', 'rombongan')),
+    'heal_request': (('pulihkan', 'sembuhkan', 'obati', 'mengobati', 'penyembuh', 'perawatan', 'pemulihan'), ('luka', 'darah', 'tenaga', 'kesehatan', 'ramuan', 'daya hidup', 'habis')),
+    'tactical_attack': (('serang', 'serbu', 'bidik', 'tembak', 'hantam', 'lumpuhkan', 'lepaskan tembakan'), ('musuh', 'lawan', 'sasaran', 'target', 'penyerang', 'gerombolan', 'pemimpin')),
+    'tactical_defend': (('bertahan', 'berlindung', 'bersembunyi', 'mundur', 'amankan posisi', 'pertahanan', 'perlindungan'), ('aman', 'risiko', 'tembok', 'utara', 'sisi', 'posisi', 'keluar')),
+    'comfort': (('sedih', 'sepi', 'kesepian', 'hampa', 'khawatir', 'cemas', 'berat menjalani', 'kehilangan semangat'), ('temani', 'teman bicara', 'mendengarkan', 'sendirian', 'ditemani', 'ceritaku', 'hari ini')),
+    'banter': (('lelucon', 'humor', 'jenaka', 'konyol', 'candaan', 'lucu', 'tertawa', 'ketawa'), ('bikin', 'kasih', 'buat', 'suasana', 'bahan', 'dong', 'ringan')),
+}
+
+def _compositional_intent(normalized: str) -> str | None:
+    """Require evidence from two separate cue families; otherwise abstain."""
+    tokens = set(normalized.split())
+    candidates: list[str] = []
+    for intent, groups in _COMPOSITIONAL_CUES.items():
+        matched_groups = sum(1 for group in groups if any((cue in normalized if ' ' in cue else cue in tokens) for cue in group))
+        if matched_groups >= 2:
+            candidates.append(intent)
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def classify_intent(
     message: str,
     *,
@@ -109,6 +133,13 @@ def classify_intent(
         key=lambda item: (-item[0], item[1]),
     )
     if not ranked:
+        # Conservative compositional fallback: two cue families, no negation.
+        has_negation = any(word in _NEGATIONS for word in normalized.split())
+        inferred = None if has_negation else _compositional_intent(normalized)
+        if inferred and not ("?" in message and "atau" in normalized.split() and inferred in {"tactical_attack", "tactical_defend"}):
+            return {"status": "matched", "intent": inferred, "confidence": 0.80,
+                    "matched_phrase": None, "normalized_message": normalized,
+                    "game_id": game_id, "reason": "compositional_two_cue_families"}
         return {"status": "unknown", "intent": "unknown", "confidence": 0.0,
                 "matched_phrase": None, "normalized_message": normalized, "game_id": game_id,
                 "reason": "no_supported_phrase_match_or_negated"}
