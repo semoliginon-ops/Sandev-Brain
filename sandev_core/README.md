@@ -10,7 +10,8 @@ This folder contains executable, model-independent game-intelligence components.
 - Validate a shared, versioned adapter contract for different game genres.
 - Revalidate a proposed intent against the latest snapshot before the host engine considers execution.
 - Assemble a bounded context packet from current state, explicit need urgency, goals, raw player message, recent verified events, and trusted memory.
-- Select curated dialogue lines by validated intent, genre, explicit urgent needs, and trusted context tags—without pretending to understand raw language.
+- Classify a limited set of Indonesian player messages using transparent phrase patterns, with safe unknown/ambiguous results.
+- Select curated dialogue lines by validated intent, genre, explicit urgent needs, and trusted context tags.
 - Store only engine-confirmed events and player-approved facts in a structured memory ledger.
 - Record engine-confirmed outcomes and apply bounded, smoothed feedback within matching contexts.
 - Run regression scenarios across life simulation, shooter, and RPG decision cases.
@@ -24,15 +25,17 @@ The adapter validates candidate shapes, rejects duplicate IDs and non-finite num
 
 ## Context packet
 
-`context.py` exposes `build_context(...)`, which assembles a versioned JSON-safe packet with game/actor identifiers, current authoritative state, goals, the player's raw message, bounded recent events, and retrieved memories. It preserves the message verbatim within a configurable character limit and marks it as `raw_uninterpreted_input`: context assembly is not language understanding.
+`context.py` exposes `build_context(...)`, which assembles a versioned JSON-safe packet with game/actor identifiers, current authoritative state, explicit need urgency, goals, the player's raw message, bounded recent events, and retrieved memories. It preserves the message verbatim within a configurable character limit and marks it as `raw_uninterpreted_input`: context assembly is not language understanding.
 
-Recent events and retrieved memories are included only when their provenance is `engine_confirmed` or `player_approved`. The packet and state have configurable size limits. It does not infer current state from old memory, decide what a message means, generate dialogue, or call a model. Future language behavior can consume this packet and must be evaluated separately.
+Recent events and retrieved memories are included only when their provenance is `engine_confirmed` or `player_approved`. The packet and state have configurable size limits. It does not infer current state from old memory, or generate dialogue, or call a model.
 
-## Context and language response baseline
+## Indonesian intent and contextual response baseline
 
-`context.py` assembles the current snapshot, explicit need urgency, goals, raw player message, and provenance-checked history. `language.py` selects among authored response patterns using an intent label supplied by a separate validated interpretation layer. It can filter by game, trusted context tags, and urgent needs, with a deterministic tie-break and a safe no-match result.
+`intent.py` exposes `classify_intent(message, context=None)`. It normalizes case and punctuation plus a few casual Indonesian spellings, then matches an auditable set of phrases. Current labels include greeting, thanks, farewell, help request, danger, healing, tactical attack/defense, comfort, and banter. It returns a matched phrase and rule-match strength, or fails closed as `unknown`/`ambiguous`.
 
-This is a first language-behavior scaffold, not open-ended language understanding or free-form generation. It does not infer intent from the player message. A future language interpreter must be built and evaluated separately; until then, callers must supply a validated intent label.
+The current interpreter is intentionally narrow: match strength is not a calibrated probability, game context is metadata only, and it does not reliably understand negation, sarcasm, indirect requests, or unseen phrasing. A context-only guess is not made. Expand it with reviewed examples and evaluate on a held-out set before making stronger language-understanding claims.
+
+`language.py` selects among authored response patterns using the intent label supplied by the interpreter/caller. It can filter by game, trusted context tags, and urgent needs, with a deterministic tie-break and safe no-match result. This selector does not generate new sentences. Open-ended companion chat, spontaneous dialogue, broad Indonesian fluency, and personality consistency are not yet demonstrated.
 
 ## Engine bridge and trust boundary
 
@@ -54,4 +57,4 @@ The small benchmark uses hand-authored regression labels. It is not an independe
 
 ## Language is a core goal
 
-SANDEV Brain is intended to be a game system that is also good at language: understanding player messages, using context and memory, and producing relevant character dialogue. The teacher model is a development reference, not a runtime dependency. The standalone language/dialogue implementation is still future work; open-ended companion chat, spontaneous contextual lines, Indonesian fluency, and personality consistency have not yet been demonstrated. They must be built and tested explicitly rather than assumed to transfer automatically.
+SANDEV Brain is intended to be a game system that is also good at language: understanding player messages, using context and memory, and producing relevant character dialogue. SmolLM2 is a development-time teacher/reference, not a gameplay runtime dependency. The final game-side system remains model-independent; language behavior must be built and evaluated explicitly rather than assumed to transfer automatically.
