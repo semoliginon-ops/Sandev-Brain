@@ -55,7 +55,7 @@ def plan_player_command(
         raise PlannerInputError("max_steps must be an integer between 1 and 10")
 
     normalized = normalize_text(message)
-    if re.search(r"\\b(lalu|kemudian|dan kemudian|setelah itu)\\s*$", normalized):
+    if re.search(r"\b(lalu|kemudian|dan kemudian|setelah itu)\s*$", normalized):
         return {
             "status": "rejected", "reason": "sequence ends with a connector",
             "steps": [], "step_count": 0,
