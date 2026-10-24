@@ -15,13 +15,13 @@ Folder `sandev_core/` kini berisi komponen awal yang tidak bergantung pada model
 - pemeriksaan allow-list aksi dan prasyarat state;
 - skor, alasan keputusan, tie-break deterministik, dan fallback jika tidak ada aksi layak;
 - ledger memori persisten yang hanya menerima kejadian terkonfirmasi oleh game engine atau fakta yang disetujui pemain;
-- pencarian memori berdasarkan tag dan penggantian fakta lama oleh fakta baru yang sudah terverifikasi.
+- pencarian memori berdasarkan tag dan penggantian fakta lama oleh fakta baru yang sudah terverifikasi;\n- umpan balik skor aksi yang konservatif berdasarkan hasil yang dikonfirmasi engine;\n- benchmark regresi delapan skenario berlabel manual untuk simulasi kehidupan, shooter, dan RPG.
 
 Core mengembalikan **niat aksi**, bukan menjalankan aksi atau mengklaim berhasil. Game engine tetap wajib memvalidasi, mengeksekusi, dan mengonfirmasi hasilnya. Memori juga sengaja menolak usulan dari model guru sebagai fakta tepercaya.
 
-Lihat [sandev_core/README.md](sandev_core/README.md).
+Lihat [sandev_core/README.md](sandev_core/README.md). Benchmark dapat dijalankan dengan `PYTHONPATH=sandev_core python -m sandev_core.benchmark`; hasilnya adalah pengujian regresi skenario kecil, bukan skor kecerdasan umum.
 
-Ini masih baseline aturan/skor plus memori terverifikasi, **belum kecerdasan umum, belum sistem produksi, dan belum bukti bahwa kemampuan SmolLM2 sudah berhasil dipindahkan**. Core saat ini memerlukan state terstruktur serta kandidat aksi yang disediakan adapter game.
+Umpan balik hanya menerima hasil yang dikonfirmasi game engine, dibatasi konteks, dan memakai smoothing; ia bukan pembelajaran bebas atau jaminan keputusan benar. Ini masih baseline aturan/skor plus memori terverifikasi, **belum kecerdasan umum, belum sistem produksi, dan belum bukti bahwa kemampuan SmolLM2 sudah berhasil dipindahkan**. Core saat ini memerlukan state terstruktur serta kandidat aksi yang disediakan adapter game.
 
 ## Model kandidat untuk tahap riset
 
