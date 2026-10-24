@@ -73,7 +73,7 @@ class PlayerCommandTests(unittest.TestCase):
                 result = interpret_player_command(message, ENTITIES)
                 self.assertNotEqual(result["status"], "proposal")
                 self.assertFalse(result["execution_allowed"])
-                self.assertEqual(result["reason"], "question_requires_confirmation")
+                self.assertEqual(result["reason"], "question_or_action_alternative_requires_clarification")
 
     def test_ambiguous_intent_is_not_overridden_by_explicit_verb_fallback(self):
         result = interpret_player_command("Serang Goblin atau bertahan", ENTITIES)
