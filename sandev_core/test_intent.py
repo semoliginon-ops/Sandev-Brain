@@ -173,7 +173,11 @@ class IndonesianIntentTests(unittest.TestCase):
         self.assertEqual(result["temporal_scope"], "immediate")
         self.assertEqual(result["intent"], "tactical_attack")
         self.assertEqual(result["target_grounding"], "unresolved")
-        self.assertFalse(result["needs_clarification"])
+        self.assertTrue(result["needs_clarification"])
+        self.assertEqual(
+            result["clarification_reason"],
+            "action_target_requires_current_engine_grounding",
+        )
 
     def test_interpretation_envelope_does_not_promote_future_intention(self):
         result = interpret_message("Aku mau serang musuh nanti")
