@@ -70,9 +70,22 @@ def interpret_player_command(
     explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\b", normalized)
     # Questions and alternatives are not execution instructions, even when they
     # begin with an imperative verb ("Serang Goblin atau bertahan?").
-    has_conflicting_named_pronoun = (
+    # Bypass the generic action-choice guard only when a named entity is
+    # actually present in the text. A contextual focus may ground "dia", but
+    # must not make "Serang dia atau bertahan?" look like a named-target choice.
+    grounded_name = grounding.get("entity_name")
+    named_entity_is_in_message = (
+        isinstance(grounded_name, str)
+        and bool(grounded_name)
+        and re.search(
+            r"(?<!\\w)" + re.escape(normalize_text(grounded_name)) + r"(?!\\w)",
+            normalized,
+        )
+    )
+    has_conflicting_named_pronoun = bool(
         re.search(r"\b(dia|dirinya)\b", normalized)
         and "atau" in normalized.split()
+        and named_entity_is_in_message
     )
     if ("?" in message or ("atau" in normalized.split() and not has_conflicting_named_pronoun)) and (explicit_attack or explicit_defend):
         return {
