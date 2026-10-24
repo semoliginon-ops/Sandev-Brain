@@ -66,6 +66,9 @@ The game benchmark and intent regression set use hand-authored labels. Neither i
 
 ## Language is a core goal
 
+For the stage-by-stage message path, proposed interpretation fields, evaluation rules, and explicit limitations, see [Indonesian Language Pipeline](../docs/INDONESIAN_LANGUAGE_PIPELINE.md). The proposed shared interpretation envelope is a design target; it is not yet a fully implemented API.
+
+
 SANDEV Brain is intended to be a game system that is also good at language: understanding player messages, using context and memory, and producing relevant character dialogue. SmolLM2 is a development-time teacher/reference, not a gameplay runtime dependency. The final game-side system remains model-independent; language behavior must be built and evaluated explicitly rather than assumed to transfer automatically.
 
 
