@@ -67,6 +67,18 @@ def interpret_player_command(
     # the phrase classifier lacks that exact sentence. The target is still
     # required to resolve against the current entity list below.
     explicit_attack = re.match(r"^(serang|tembak|hantam|bidik)\b", normalized)
+    explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\b", normalized)
+    # Questions and alternatives are not execution instructions, even when they
+    # begin with an imperative verb ("Serang Goblin atau bertahan?").
+    if "?" in message and (explicit_attack or explicit_defend):
+        return {
+            "status": "not_a_confident_action",
+            "intent": "unknown",
+            "target": None,
+            "grounding": grounding,
+            "reason": "question_requires_confirmation",
+            "execution_allowed": False,
+        }
     # If a direct attack command contains a negation anywhere, abstain rather than
     # guessing its scope (e.g. "Serang Goblin, jangan").
     if explicit_attack and any(word in {"tidak", "jangan", "bukan", "belum", "tak", "enggan"} for word in normalized.split()):
@@ -78,15 +90,14 @@ def interpret_player_command(
             "reason": "negated_explicit_attack_requires_clarification",
             "execution_allowed": False,
         }
-    explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\b", normalized)
-    if interpretation["status"] != "matched" and explicit_attack:
+    if interpretation["status"] == "unknown" and explicit_attack:
         interpretation = {
             **interpretation,
             "status": "matched",
             "intent": "tactical_attack",
             "reason": "explicit_attack_verb",
         }
-    elif interpretation["status"] != "matched" and explicit_defend:
+    elif interpretation["status"] == "unknown" and explicit_defend:
         interpretation = {
             **interpretation,
             "status": "matched",
