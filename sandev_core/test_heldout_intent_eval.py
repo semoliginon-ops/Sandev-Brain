@@ -27,6 +27,13 @@ class HeldoutIntentEvaluationTests(unittest.TestCase):
         )
         self.assertIn("per_expected_intent", report)
         self.assertIn("status_counts", report)
+        self.assertIn("confusion_matrix", report)
+        matrix_total = sum(sum(counts.values()) for counts in report["confusion_matrix"].values())
+        self.assertEqual(matrix_total, len(CASES))
+        for row in report["rows"]:
+            self.assertGreaterEqual(
+                report["confusion_matrix"][row["expected"]].get(row["actual"], 0), 1
+            )
 
 
 if __name__ == "__main__":
