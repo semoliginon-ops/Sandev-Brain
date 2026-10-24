@@ -18,6 +18,25 @@ class PlayerCommandTests(unittest.TestCase):
         self.assertEqual(result["target"]["entity_id"], "enemy-1")
         self.assertFalse(result["execution_allowed"])
 
+    def test_attack_pronoun_uses_explicit_focus_context(self):
+        result = interpret_player_command(
+            "Serang dia", ENTITIES, context={"focus_entity_id": "enemy-2"}
+        )
+        self.assertEqual(result["status"], "proposal")
+        self.assertEqual(result["target"]["entity_id"], "enemy-2")
+        self.assertFalse(result["execution_allowed"])
+
+    def test_spatial_reference_uses_engine_relation_metadata(self):
+        entities = [
+            {"id": "ally-1", "name": "Falcon"},
+            {"id": "enemy-1", "name": "Bandit", "is_hostile": True, "relations_to": {"ally-1": "behind"}},
+        ]
+        result = interpret_player_command(
+            "Serang musuh di belakangnya", entities, context={"focus_entity_id": "ally-1"}
+        )
+        self.assertEqual(result["status"], "proposal")
+        self.assertEqual(result["target"]["entity_id"], "enemy-1")
+
     def test_two_target_mentions_are_ambiguous(self):
         result = interpret_player_command("Serang Goblin dan Bandit", ENTITIES)
         self.assertEqual(result["status"], "ambiguous_target")
