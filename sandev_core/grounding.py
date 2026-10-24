@@ -110,3 +110,102 @@ def ground_entities(
         "candidates": [{"entity_id": selected["entity_id"], "entity_name": selected["entity_name"]}],
         "reason": "matched_current_engine_entity_name",
     }
+
+
+def resolve_context_reference(
+    message: str,
+    entities: Sequence[Mapping[str, Any]],
+    *,
+    context: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Resolve a small set of references only from explicit engine context.
+
+    Supported:
+    - "dia/dirinya" when context.focus_entity_id names one current entity.
+    - "musuh di belakangnya" when focus_entity_id exists and exactly one
+      entity is explicitly marked is_hostile=True with relations_to[focus_id]
+      equal to "behind".
+
+    The engine must provide focus_entity_id and relation metadata. This helper
+    does not infer spatial relationships from coordinates or guess a focus.
+    """
+    normalized = normalize_text(message)
+    if not isinstance(entities, (list, tuple)):
+        raise GroundingInputError("entities must be a list")
+    if context is not None and not isinstance(context, Mapping):
+        raise GroundingInputError("context must be an object")
+    if context is None:
+        context = {}
+
+    pronoun_reference = bool(re.search(r"\\b(dia|dirinya|nya)\\b", normalized))
+    behind_enemy_reference = bool(
+        re.search(r"\\bmusuh di belakangnya\\b", normalized)
+        or re.search(r"\\bmusuh belakangnya\\b", normalized)
+    )
+    if not pronoun_reference and not behind_enemy_reference:
+        return {
+            "status": "unresolved",
+            "entity_id": None,
+            "entity_name": None,
+            "matched_alias": None,
+            "candidates": [],
+            "reason": "no_supported_context_reference",
+        }
+
+    focus_id = context.get("focus_entity_id")
+    by_id = {
+        item.get("id"): item
+        for item in entities
+        if isinstance(item, Mapping) and isinstance(item.get("id"), str)
+    }
+    if not isinstance(focus_id, str) or focus_id not in by_id:
+        return {
+            "status": "unresolved",
+            "entity_id": None,
+            "entity_name": None,
+            "matched_alias": None,
+            "candidates": [],
+            "reason": "focus_entity_not_grounded_in_current_context",
+        }
+
+    if behind_enemy_reference:
+        candidates = []
+        for item in entities:
+            if not isinstance(item, Mapping) or item.get("is_hostile") is not True:
+                continue
+            relations = item.get("relations_to", {})
+            if isinstance(relations, Mapping) and relations.get(focus_id) == "behind":
+                if isinstance(item.get("id"), str) and isinstance(item.get("name"), str):
+                    candidates.append({"entity_id": item["id"], "entity_name": item["name"]})
+        unique = {item["entity_id"]: item for item in candidates}
+        candidates = sorted(unique.values(), key=lambda item: (item["entity_id"], item["entity_name"]))
+        if len(candidates) == 1:
+            selected = candidates[0]
+            return {
+                "status": "grounded",
+                "entity_id": selected["entity_id"],
+                "entity_name": selected["entity_name"],
+                "matched_alias": "musuh di belakangnya",
+                "candidates": candidates,
+                "reason": "unique_engine_relation_to_focus_entity",
+            }
+        return {
+            "status": "ambiguous" if candidates else "unresolved",
+            "entity_id": None,
+            "entity_name": None,
+            "matched_alias": None,
+            "candidates": candidates,
+            "reason": "multiple_hostiles_behind_focus" if candidates else "no_engine_marked_hostile_behind_focus",
+        }
+
+    selected = by_id[focus_id]
+    if not isinstance(selected.get("name"), str) or not selected["name"].strip():
+        raise GroundingInputError("focus entity must have a non-empty name")
+    return {
+        "status": "grounded",
+        "entity_id": focus_id,
+        "entity_name": selected["name"],
+        "matched_alias": "dia",
+        "candidates": [{"entity_id": focus_id, "entity_name": selected["name"]}],
+        "reason": "explicit_focus_entity_from_current_context",
+    }
