@@ -126,6 +126,18 @@ class IndonesianIntentTests(unittest.TestCase):
                 result = classify_intent(message)
                 self.assertEqual(result["intent"], "unknown", result)
 
+    def test_recounted_or_discussed_actions_are_not_commands(self):
+        cases = (
+            "Aku cuma cerita soal serang musuh tadi",
+            "Apa pendapatmu kalau aku serang musuh?",
+            "Aku tadi bilang serang musuh, bukan menyuruh sekarang",
+        )
+        for message in cases:
+            with self.subTest(message=message):
+                result = classify_intent(message)
+                self.assertEqual(result["intent"], "unknown", result)
+                self.assertEqual(result["status"], "unknown", result)
+
     def test_rejects_invalid_inputs(self):
         with self.assertRaises(IntentInputError):
             classify_intent(None)
