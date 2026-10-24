@@ -2,7 +2,7 @@
 
 This deterministic phrase matcher is an auditable starting point, not a general
 language model. It never executes game actions and returns unknown when the
-input is ambiguous or unsupported.
+input is ambiguous, negated, or unsupported.
 """
 from __future__ import annotations
 
@@ -28,16 +28,26 @@ DEFAULT_PATTERNS: tuple[dict[str, Any], ...] = (
     {"intent": "banter", "phrases": ("ayo bercanda", "ceritakan lelucon", "buat aku tertawa", "lucu dong", "gombalin aku"), "weight": 1.0},
 )
 
+_NEGATIONS = {"tidak", "jangan", "bukan", "belum", "tak", "enggan"}
+
 
 def normalize_text(text: str) -> str:
     """Normalize case, punctuation and common casual Indonesian spellings."""
     if not isinstance(text, str):
         raise IntentInputError("message must be a string")
     value = unicodedata.normalize("NFKC", text).casefold().strip()
-    value = re.sub(r"[^\w\s-]", " ", value, flags=re.UNICODE)
-    value = re.sub(r"\s+", " ", value).strip()
-    value = re.sub(r"\b(nggak|enggak|gak|ga)\b", "tidak", value)
+    value = re.sub(r"[^\\w\\s-]", " ", value, flags=re.UNICODE)
+    value = re.sub(r"\\s+", " ", value).strip()
+    value = re.sub(r"\\b(nggak|enggak|gak|ga)\\b", "tidak", value)
     return value
+
+
+def _is_negated(normalized_message: str, start: int) -> bool:
+    """Conservatively detect a negation immediately before a matched phrase."""
+    prefix = normalized_message[:start].split()
+    return bool(prefix and prefix[-1] in _NEGATIONS) or (
+        len(prefix) >= 2 and prefix[-2] in _NEGATIONS
+    )
 
 
 def classify_intent(
@@ -52,7 +62,8 @@ def classify_intent(
 
     Context is optional and supplies game_id as metadata only. The first version
     deliberately does not use game state to guess what the player means.
-    Scores are rule-match strengths, not calibrated probabilities.
+    Scores are rule-match strengths, not calibrated probabilities. Negated
+    matches are ignored conservatively; full linguistic scope is not inferred.
     """
     normalized = normalize_text(message)
     if not isinstance(min_confidence, (int, float)) or isinstance(min_confidence, bool) or not 0 <= min_confidence <= 1:
@@ -86,7 +97,8 @@ def classify_intent(
             if pair in seen:
                 raise IntentInputError(f"duplicate intent phrase: {intent}/{normalized_phrase}")
             seen.add(pair)
-            if normalized_phrase and re.search(r"(?<!\w)" + re.escape(normalized_phrase) + r"(?!\w)", normalized):
+            match = re.search(r"(?<!\\w)" + re.escape(normalized_phrase) + r"(?!\\w)", normalized)
+            if match and not _is_negated(normalized, match.start()):
                 previous = scores.get(intent)
                 candidate = (float(weight), normalized_phrase)
                 if previous is None or candidate[0] > previous[0] or (candidate[0] == previous[0] and len(candidate[1]) > len(previous[1])):
@@ -99,7 +111,7 @@ def classify_intent(
     if not ranked:
         return {"status": "unknown", "intent": "unknown", "confidence": 0.0,
                 "matched_phrase": None, "normalized_message": normalized, "game_id": game_id,
-                "reason": "no_supported_phrase_match"}
+                "reason": "no_supported_phrase_match_or_negated"}
 
     best_score, best_intent, best_phrase = ranked[0]
     second_score = ranked[1][0] if len(ranked) > 1 else 0.0
