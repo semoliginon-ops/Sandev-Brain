@@ -67,6 +67,17 @@ def interpret_player_command(
     # the phrase classifier lacks that exact sentence. The target is still
     # required to resolve against the current entity list below.
     explicit_attack = re.match(r"^(serang|tembak|hantam|bidik)\b", normalized)
+    # If a direct attack command contains a negation anywhere, abstain rather than
+    # guessing its scope (e.g. "Serang Goblin, jangan").
+    if explicit_attack and any(word in {"tidak", "jangan", "bukan", "belum", "tak", "enggan"} for word in normalized.split()):
+        return {
+            "status": "not_a_confident_action",
+            "intent": "unknown",
+            "target": None,
+            "grounding": grounding,
+            "reason": "negated_explicit_attack_requires_clarification",
+            "execution_allowed": False,
+        }
     explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\b", normalized)
     if interpretation["status"] != "matched" and explicit_attack:
         interpretation = {
