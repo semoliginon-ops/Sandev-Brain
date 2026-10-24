@@ -87,7 +87,7 @@ def interpret_player_command(
         and "atau" in normalized.split()
         and named_entity_is_in_message
     )
-    if ("?" in message or ("atau" in normalized.split() and not has_conflicting_named_pronoun)) and (explicit_attack or explicit_defend):
+    if ("?" in message or "atau" in normalized.split()) and not has_conflicting_named_pronoun and (explicit_attack or explicit_defend):
         return {
             "status": "not_a_confident_action",
             "intent": "unknown",
