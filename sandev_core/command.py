@@ -70,7 +70,12 @@ def interpret_player_command(
     explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\b", normalized)
     # Questions and alternatives are not execution instructions, even when they
     # begin with an imperative verb ("Serang Goblin atau bertahan?").
-    if ("?" in message or "atau" in normalized.split()) and (explicit_attack or explicit_defend):
+    has_conflicting_named_pronoun = (
+        grounding["status"] == "grounded"
+        and re.search(r"\\b(dia|dirinya)\\b", normalized)
+        and "atau" in normalized.split()
+    )
+    if ("?" in message or ("atau" in normalized.split() and not has_conflicting_named_pronoun)) and (explicit_attack or explicit_defend):
         return {
             "status": "not_a_confident_action",
             "intent": "unknown",
