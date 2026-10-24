@@ -66,13 +66,21 @@ def interpret_player_command(
     # Narrow imperative grammar: recognize an explicit attack verb even if
     # the phrase classifier lacks that exact sentence. The target is still
     # required to resolve against the current entity list below.
-    explicit_attack = re.match(r"^(serang|tembak|hantam|bidik)\b", normalized)
+    explicit_attack = re.match(r"^(serang|tembak|hantam|bidik)\\b", normalized)
+    explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\\b", normalized)
     if interpretation["status"] != "matched" and explicit_attack:
         interpretation = {
             **interpretation,
             "status": "matched",
             "intent": "tactical_attack",
             "reason": "explicit_attack_verb",
+        }
+    elif interpretation["status"] != "matched" and explicit_defend:
+        interpretation = {
+            **interpretation,
+            "status": "matched",
+            "intent": "tactical_defend",
+            "reason": "explicit_defend_verb",
         }
 
     if interpretation["status"] != "matched" or interpretation["intent"] not in _ACTION_INTENTS:
