@@ -26,9 +26,9 @@ class EntityGroundingTests(unittest.TestCase):
     def test_equal_mentions_of_different_entities_are_ambiguous(self):
         entities = [
             {"id": "enemy-1", "name": "Goblin", "aliases": []},
-            {"id": "enemy-2", "name": "Naga", "aliases": []},
+            {"id": "enemy-2", "name": "Bandit", "aliases": []},
         ]
-        result = ground_entities("Serang Goblin dan Naga", entities)
+        result = ground_entities("Serang Goblin dan Bandit", entities)
         self.assertEqual(result["status"], "ambiguous")
         self.assertIsNone(result["entity_id"])
         self.assertEqual({item["entity_id"] for item in result["candidates"]}, {"enemy-1", "enemy-2"})
