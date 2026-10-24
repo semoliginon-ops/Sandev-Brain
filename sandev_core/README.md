@@ -90,3 +90,8 @@ A plan is returned only when every step resolves confidently. If any step has an
 ### Per-step planner revalidation
 
 `planner.py` also exposes `validate_plan_step(plan, step_index, current_entities, current_state_version=...)`. It rejects stale/missing state versions and targets that disappeared, became duplicated, or changed identity. Acceptance means only that the plan step still references the same snapshot and entity; the host engine must still map it to a currently legal action candidate and run `engine_bridge.validate_intent` before execution. After an action changes the world/state version, the remaining command should be re-planned against the new snapshot rather than blindly continuing an old sequence.
+
+
+### Fresh Indonesian intent holdout
+
+`heldout_intent_eval.py` is a separately authored 30-example diagnostic set, intended to remain untouched while rules are iterated. Run it with `PYTHONPATH=sandev_core python -m heldout_intent_eval`. It reports overall accuracy, per-label accuracy, statuses, and every mismatch. It is still a small manually authored set—not a statistically representative benchmark—and must be replaced with a new holdout if used to tune rules. Unknown predictions count as incorrect for examples with a specific expected intent, so the score does not hide unsupported paraphrases.
