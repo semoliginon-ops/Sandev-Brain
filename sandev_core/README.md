@@ -78,3 +78,10 @@ SANDEV Brain is intended to be a game system that is also good at language: unde
 - “musuh di belakangnya” only when exactly one current entity is explicitly marked `is_hostile: true` and its engine-supplied `relations_to[focus_entity_id]` is `"behind"`.
 
 The resolver does not infer spatial relationships from coordinates or invent a focus entity. Missing context yields unresolved results; multiple matching hostile entities yield ambiguity. `command.py` uses this resolver only when direct name grounding did not resolve the message. All command outputs remain proposals with `execution_allowed: false`; the game engine must revalidate and execute any action.
+
+
+## Multi-step command planning
+
+`planner.py` exposes `plan_player_command(message, entities, context=None, max_steps=5)`. It supports explicit sequential connectors such as “lalu”, “kemudian”, “setelah itu”, and “dan kemudian”, then interprets each clause independently against the current entity snapshot. It deliberately does not split on plain “dan” and refuses unsupported sequencing such as “sekaligus” rather than guessing whether actions are sequential or simultaneous.
+
+A plan is returned only when every step resolves confidently. If any step has an unknown or ambiguous target, the planner returns no partial step list and requests clarification. A named defense target must also be grounded. Outputs always set `execution_allowed: false`; they are not a queue the game should blindly execute. The host engine must revalidate each step against a fresh snapshot immediately before execution and stop if the state version, target, preconditions, or legal actions change. This planner is a deterministic parser over a narrow grammar, not general natural-language planning.
