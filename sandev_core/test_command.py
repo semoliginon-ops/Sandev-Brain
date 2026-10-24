@@ -47,6 +47,16 @@ class PlayerCommandTests(unittest.TestCase):
         with self.assertRaises(CommandInputError):
             interpret_player_command("Serang Goblin", "not a list")
 
+    def test_invalid_message_raises_domain_error(self):
+        for message in (None, 42, ["Serang Goblin"]):
+            with self.subTest(message=message):
+                with self.assertRaises(CommandInputError):
+                    interpret_player_command(message, ENTITIES)
+
+    def test_invalid_context_raises_domain_error(self):
+        with self.assertRaises(CommandInputError):
+            interpret_player_command("Serang Goblin", ENTITIES, context="rpg")
+
 
 if __name__ == "__main__":
     unittest.main()
