@@ -85,3 +85,8 @@ The resolver does not infer spatial relationships from coordinates or invent a f
 `planner.py` exposes `plan_player_command(message, entities, context=None, max_steps=5)`. It supports explicit sequential connectors such as “lalu”, “kemudian”, “setelah itu”, and “dan kemudian”, then interprets each clause independently against the current entity snapshot. It deliberately does not split on plain “dan” and refuses unsupported sequencing such as “sekaligus” rather than guessing whether actions are sequential or simultaneous.
 
 A plan is returned only when every step resolves confidently. If any step has an unknown or ambiguous target, the planner returns no partial step list and requests clarification. A named defense target must also be grounded. Outputs always set `execution_allowed: false`; they are not a queue the game should blindly execute. The host engine must revalidate each step against a fresh snapshot immediately before execution and stop if the state version, target, preconditions, or legal actions change. This planner is a deterministic parser over a narrow grammar, not general natural-language planning.
+
+
+### Per-step planner revalidation
+
+`planner.py` also exposes `validate_plan_step(plan, step_index, current_entities, current_state_version=...)`. It rejects stale/missing state versions and targets that disappeared, became duplicated, or changed identity. Acceptance means only that the plan step still references the same snapshot and entity; the host engine must still map it to a currently legal action candidate and run `engine_bridge.validate_intent` before execution. After an action changes the world/state version, the remaining command should be re-planned against the new snapshot rather than blindly continuing an old sequence.
