@@ -8,25 +8,26 @@ SANDEV Brain must understand player language as well as make game decisions. Thi
 
 1. **Raw input** — `context.py:build_context` preserves the player's message verbatim within configured limits and labels it `raw_uninterpreted_input`. The host remains authoritative for world state.
 2. **Intent baseline** — `intent.py:classify_intent` normalizes text and matches curated Indonesian phrases. It can return `matched`, `unknown`, or `ambiguous`; the score is rule-match strength, not a calibrated probability.
-3. **Command safeguards** — `command.py:interpret_player_command` rejects or abstains on unsupported action wording, negation, questions/action alternatives, recounted actions, future intentions, and multi-step instructions it cannot safely plan.
-4. **Entity grounding** — `grounding.py` resolves names and aliases against the current engine-supplied entity list. Pronouns and spatial descriptions require explicit context or relation metadata from the host.
-5. **Conversation response** — `conversation.py` and `language.py` select a curated authored response when the message and trusted context match a supported pattern. They do not generate novel sentences.
-6. **Proposal and validation** — a recognized action can become a non-executable proposal. The engine bridge and host game must validate it against the latest authoritative state and game rules.
-7. **Outcome and memory** — only explicit engine-confirmed outcomes may be recorded as such. A model suggestion, interpreted request, or pending proposal is not a world event.
+3. **Interpretation envelope** — `intent.py:interpret_message` wraps the baseline with explicit `speech_act`, `temporal_scope`, `negation`, clarification fields, target-grounding status, and `execution_allowed: false`. These fields are conservative heuristics, not full grammatical analysis.
+4. **Command safeguards** — `command.py:interpret_player_command` rejects or abstains on unsupported action wording, negation, questions/action alternatives, recounted actions, future intentions, and multi-step instructions it cannot safely plan.
+5. **Entity grounding** — `grounding.py` resolves names and aliases against the current engine-supplied entity list. Pronouns and spatial descriptions require explicit context or relation metadata from the host.
+6. **Conversation response** — `conversation.py` and `language.py` select a curated authored response when the message and trusted context match a supported pattern. They do not generate novel sentences.
+7. **Proposal and validation** — a recognized action can become a non-executable proposal. The engine bridge and host game must validate it against the latest authoritative state and game rules.
+8. **Outcome and memory** — only explicit engine-confirmed outcomes may be recorded as such. A model suggestion, interpreted request, or pending proposal is not a world event.
 
-## Message interpretation contract
+## Interpretation envelope
 
-A future shared interpretation envelope should expose these concepts explicitly, rather than hiding them in a single intent label:
+`interpret_message(message, context=None)` returns a versioned envelope with:
 
 - `speech_act`: command, question, statement, mention, cancellation, or unclear;
 - `temporal_scope`: immediate, past/recounted, future/intended, or unspecified;
 - `negation`: detected, not detected, or uncertain;
-- `intent`: a supported intent label or `unknown`;
-- `target_grounding`: resolved, ambiguous, unresolved, or not applicable;
-- `needs_clarification`: boolean with a machine-readable reason;
-- `execution_allowed`: always `false` at the language interpretation stage.
+- `intent` and `intent_status`: a supported label or unknown plus baseline status;
+- `target_grounding`: unresolved for action intents until a separate grounding step, otherwise not applicable;
+- `needs_clarification` and `clarification_reason`;
+- `execution_allowed`: always `false` at this stage.
 
-This envelope is a design target, not a claim that all fields are currently implemented. Do not infer that the absence of a detected negation proves the message is positive; rule-based negation checks are incomplete.
+This is a first explicit interface, not a claim that all Indonesian grammar is understood. In particular, `not_detected` does not prove a message is positive; rule-based negation and temporal-scope checks are incomplete. A downstream host must still ground targets, validate actions, and execute through its authoritative rules.
 
 ## Evaluation rules
 
@@ -43,7 +44,7 @@ The current interpreter is deterministic and narrow. It does not reliably solve 
 
 ## Acceptance criteria for the next implementation stage
 
-1. The interpretation output distinguishes commands from questions, statements, mentions, cancellation, and future intentions.
+1. The interpretation output distinguishes commands from questions, statements, mentions, cancellation, and future intentions, using conservative heuristic signals.
 2. Ambiguous or low-evidence messages request clarification or abstain.
 3. Entity references are resolved only from current host-provided entities and explicit context.
 4. Language interpretation cannot execute an action or claim an outcome.
