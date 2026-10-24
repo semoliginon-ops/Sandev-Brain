@@ -22,5 +22,5 @@ jobs:
         run: PYTHONPATH=sandev_core python -m unittest discover -s sandev_core -v
       - name: Test teacher research harness without downloading model weights
         run: PYTHONPATH=smollm python -m unittest discover -s smollm -v
-      - name: Report untouched Indonesian intent holdout (diagnostic only)
+      - name: Report Indonesian intent diagnostic (not a pristine holdout)
         run: PYTHONPATH=sandev_core python -m heldout_intent_eval
