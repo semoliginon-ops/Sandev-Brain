@@ -63,6 +63,23 @@ class PlayerCommandTests(unittest.TestCase):
         self.assertEqual(result["status"], "target_required")
         self.assertIsNone(result["target"])
 
+    def test_question_with_imperative_verb_is_not_a_command(self):
+        for message in (
+            "Serang Goblin atau bertahan?",
+            "Serang Goblin?",
+            "Jaga posisi?",
+        ):
+            with self.subTest(message=message):
+                result = interpret_player_command(message, ENTITIES)
+                self.assertNotEqual(result["status"], "proposal")
+                self.assertFalse(result["execution_allowed"])
+                self.assertEqual(result["reason"], "question_requires_confirmation")
+
+    def test_ambiguous_intent_is_not_overridden_by_explicit_verb_fallback(self):
+        result = interpret_player_command("Serang Goblin atau bertahan", ENTITIES)
+        self.assertNotEqual(result["status"], "proposal")
+        self.assertFalse(result["execution_allowed"])
+
     def test_negated_attack_does_not_become_proposal(self):
         result = interpret_player_command("Jangan serang Goblin", ENTITIES)
         self.assertNotEqual(result["status"], "proposal")
