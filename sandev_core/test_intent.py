@@ -108,6 +108,28 @@ class IndonesianIntentTests(unittest.TestCase):
         self.assertEqual(result["status"], "unknown")
         self.assertEqual(result["intent"], "unknown")
 
+    def test_contrastive_negation_cancels_earlier_action_cue(self):
+        cases = (
+            "Aku butuh potion, tapi jangan dulu",
+            "Aku ingin menyerang, namun jangan sekarang",
+            "Aku perlu heal, tetapi tidak sekarang",
+        )
+        for message in cases:
+            with self.subTest(message=message):
+                result = classify_intent(message)
+                self.assertEqual(result["status"], "unknown", result)
+                self.assertEqual(result["intent"], "unknown", result)
+                self.assertEqual(
+                    result["reason"],
+                    "contrasting_negation_requires_clarification",
+                )
+
+    def test_casual_negated_attack_stays_unknown(self):
+        for message in ("Aku nggak mau menyerang", "Aku gak mau serang musuh"):
+            with self.subTest(message=message):
+                result = classify_intent(message)
+                self.assertEqual(result["intent"], "unknown", result)
+
     def test_rejects_invalid_inputs(self):
         with self.assertRaises(IntentInputError):
             classify_intent(None)
