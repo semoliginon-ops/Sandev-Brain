@@ -124,6 +124,8 @@ class PlayerCommandTests(unittest.TestCase):
         self.assertEqual(result["language"]["speech_act"], "command")
         self.assertEqual(result["language"]["temporal_scope"], "immediate")
         self.assertEqual(result["language"]["target_grounding"], "grounded")
+        self.assertFalse(result["language"]["needs_clarification"])
+        self.assertIsNone(result["language"]["clarification_reason"])
         self.assertFalse(result["language"]["execution_allowed"])
         self.assertFalse(result["execution_allowed"])
 
