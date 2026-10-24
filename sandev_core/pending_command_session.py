@@ -14,9 +14,10 @@ from pending_actions import PendingActionRegistry
 
 
 _CANCEL_PREFIX = re.compile(
-    r"^(?:batal(?:kan)?|cancel(?:led)?|stop|hentikan|"
-    r"jangan(?:\s+dulu)?|batalkan perintah(?:nya)?)\b"
-, flags=re.IGNORECASE)
+    r"^(?:tolong\\s+)?(?:batal(?:kan|in)?|cancel(?:led)?|stop|hentikan|batalkan perintah(?:nya)?)(?:\\b|$)"
+    r"|^jangan(?:\\s+dulu)?(?:\\s+(?:lanjut(?:kan)?|teruskan|eksekusi|jalankan|serang|tembak|hantam|bidik)(?:\\s+.+)?)?[.!?]*$",
+    flags=re.IGNORECASE,
+)
 
 
 class PendingCommandSession:
