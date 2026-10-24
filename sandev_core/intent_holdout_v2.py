@@ -69,7 +69,7 @@ def run_evaluation() -> dict[str, object]:
 
 def main() -> int:
     report = run_evaluation()
-    print(f"Fresh holdout v2 (manual/small; freeze rules after this read): "
+    print(f"Intent diagnostic v2 (manual/small; previously inspected; do not tune): "
           f"{report['correct']}/{report['total']} ({report['accuracy']:.1%})")
     print(f"Statuses: {report['status_counts']}")
     for row in report["rows"]:
