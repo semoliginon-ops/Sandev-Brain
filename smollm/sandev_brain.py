@@ -17,8 +17,8 @@ memory_update adalah usulan; engine wajib memverifikasi kejadian sebelum menyimp
 
 def _extract_json(raw: str) -> dict[str, Any]:
     fence = chr(96) * 3
-    text = re.sub(r"^\\s*" + re.escape(fence) + r"(?:json)?\\s*", "", raw.strip(), flags=re.IGNORECASE)
-    text = re.sub(r"\\s*" + re.escape(fence) + r"\\s*$", "", text)
+    text = re.sub(r"^\s*" + re.escape(fence) + r"(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
+    text = re.sub(r"\s*" + re.escape(fence) + r"\\s*$", "", text)
     start, end = text.find("{"), text.rfind("}")
     if start < 0 or end <= start: raise ValueError("Model output contains no JSON object")
     obj = json.loads(text[start:end + 1])
@@ -84,7 +84,7 @@ class SandevBrain:
         context = {"character": character, "recent_events": recent_events or [],
                    "player_message": player_message, "valid_actions": valid_actions}
         messages = [{"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "KONTEKS SANDEV LIFE:\\n" + json.dumps(context, ensure_ascii=False)}]
+                    {"role": "user", "content": "KONTEKS SANDEV LIFE:\n" + json.dumps(context, ensure_ascii=False)}]
         inputs = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt", return_dict=True)
         device = next(self.model.parameters()).device
         inputs = {key: value.to(device) for key, value in inputs.items()}
