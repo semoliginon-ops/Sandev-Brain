@@ -144,6 +144,19 @@ def classify_intent(
                 if previous is None or candidate[0] > previous[0] or (candidate[0] == previous[0] and len(candidate[1]) > len(previous[1])):
                     scores[intent] = candidate
 
+    # Mentions and advice questions are conversational context, not action orders.
+    # Avoid turning a quoted/recounted action phrase into an instruction.
+    non_command_context = re.search(
+        r"\\b(cuma cerita|cerita soal|cerita tentang|apa pendapatmu|menurutmu kalau|aku bilang tadi|aku tadi bilang)\\b",
+        normalized,
+    )
+    if non_command_context and any(
+        intent in scores for intent in ("tactical_attack", "tactical_defend", "heal_request")
+    ):
+        return {"status": "unknown", "intent": "unknown", "confidence": 0.0,
+                "matched_phrase": None, "normalized_message": normalized,
+                "game_id": game_id, "reason": "conversational_mention_is_not_an_action_order"}
+
     # A specific defensive instruction can contain generic help wording
     # (e.g. "bantu aku berlindung"). Prefer the explicit defensive action
     # over the broad "bantu aku" help-request cue; this is not action execution.
