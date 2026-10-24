@@ -10,6 +10,7 @@ def context(game_id="plane_shooter", state=None, memories=None, events=None):
         "actor_id": "companion",
         "state_version": 2,
         "state": state or {"health": 35},
+        "needs": {},
         "goals": [],
         "player_message": "Tolong lindungi aku!",
         "player_message_status": "raw_uninterpreted_input",
@@ -56,7 +57,7 @@ class ContextualLanguageTests(unittest.TestCase):
 
     def test_avoids_inappropriate_line_when_need_is_critical(self):
         result = select_response(
-            context(state={"health": 15}),
+            {**context(), "needs": {"health": 95}},
             [{"id": "joke", "intent": "banter", "text": "Waktunya bercanda!",
               "forbidden_needs": ["health"]}],
             intent="banter",
