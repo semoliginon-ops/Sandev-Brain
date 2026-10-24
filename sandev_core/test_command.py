@@ -80,6 +80,19 @@ class PlayerCommandTests(unittest.TestCase):
         self.assertNotEqual(result["status"], "proposal")
         self.assertFalse(result["execution_allowed"])
 
+    def test_pronoun_action_choice_does_not_become_attack_proposal(self):
+        for message in ("Serang dia atau bertahan?", "Serang dia atau bertahan"):
+            with self.subTest(message=message):
+                result = interpret_player_command(
+                    message, ENTITIES, context={"focus_entity_id": "enemy-2"}
+                )
+                self.assertNotEqual(result["status"], "proposal")
+                self.assertFalse(result["execution_allowed"])
+                self.assertEqual(
+                    result["reason"],
+                    "question_or_action_alternative_requires_clarification",
+                )
+
     def test_negated_attack_does_not_become_proposal(self):
         result = interpret_player_command("Jangan serang Goblin", ENTITIES)
         self.assertNotEqual(result["status"], "proposal")
