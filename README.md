@@ -18,7 +18,7 @@ Folder `sandev_core/` berisi fondasi awal yang tidak bergantung pada model:
 - ledger memori persisten yang hanya menerima kejadian terkonfirmasi oleh game engine atau fakta yang disetujui pemain;
 - pencarian memori berdasarkan tag dan penggantian fakta lama oleh fakta baru yang sudah terverifikasi;
 - umpan balik skor aksi konservatif berdasarkan hasil yang dikonfirmasi engine;
-- benchmark regresi delapan skenario berlabel manual untuk simulasi kehidupan, shooter, dan RPG.
+- benchmark regresi delapan skenario berlabel manual untuk simulasi kehidupan, shooter, dan RPG;\n- interpretasi perintah terbatas yang mengikat nama entitas ke snapshot engine, termasuk pronomina berbasis `focus_entity_id` dan target spasial hanya saat relasi eksplisit dari engine tersedia.
 
 Adapter yang baru ditambahkan menguji kontrak snapshot yang sama untuk companion shooter, karakter RPG, dan karakter simulasi kehidupan. Adapter memvalidasi bentuk data dan menghasilkan **niat aksi**, bukan menjalankan aksi atau mengklaim berhasil. Integrasi game nyata tetap harus memasok state/kandidat legal dan meminta engine memvalidasi niat sebelum eksekusi.
 
