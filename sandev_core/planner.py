@@ -188,7 +188,15 @@ def validate_plan_step(
         return reject("step_is_not_a_proposal")
     if proposal.get("execution_allowed") is not False:
         return reject("step_must_remain_non_executable")
+    allowed_intents = {"tactical_attack", "tactical_defend", "heal_request", "help_request"}
+    intent = proposal.get("intent")
+    if intent not in allowed_intents:
+        return reject("unsupported_proposal_intent")
+
     target = proposal.get("target")
+    if intent in {"tactical_attack", "tactical_defend"} and target is None:
+        return reject("action_target_required")
+    grounding = proposal.get("grounding")
     if target is not None:
         if not isinstance(target, Mapping):
             return reject("malformed_target_reference")
@@ -196,6 +204,10 @@ def validate_plan_step(
         target_name = target.get("entity_name")
         if not isinstance(target_id, str) or not target_id or not isinstance(target_name, str):
             return reject("malformed_target_reference")
+        if not isinstance(grounding, Mapping) or grounding.get("status") != "grounded":
+            return reject("target_not_grounded_by_proposal")
+        if grounding.get("entity_id") != target_id or grounding.get("entity_name") != target_name:
+            return reject("target_does_not_match_grounding")
         matches = [
             entity for entity in current_entities
             if isinstance(entity, Mapping) and entity.get("id") == target_id
