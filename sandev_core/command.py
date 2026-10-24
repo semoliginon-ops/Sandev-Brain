@@ -84,6 +84,29 @@ def interpret_player_command(
     # required to resolve against the current entity list below.
     explicit_attack = re.match(r"^(serang|tembak|hantam|bidik)\b", normalized)
     explicit_defend = re.match(r"^(lindungi|jaga|pertahankan)\b", normalized)
+    # A narrowly recognized imperative can enrich an otherwise unclear
+    # language envelope, but only when no question, cancellation, negation, or
+    # non-immediate temporal cue conflicts with that reading.
+    if (
+        interpretation.get("speech_act") == "unclear"
+        and (explicit_attack or explicit_defend)
+        and "?" not in message
+        and interpretation.get("temporal_scope") == "unspecified"
+        and interpretation.get("negation") == "not_detected"
+    ):
+        language_envelope = {
+            **language_envelope,
+            "speech_act": "command",
+            "temporal_scope": "immediate",
+            "needs_clarification": False,
+            "clarification_reason": None,
+        }
+        interpretation.update({
+            "speech_act": "command",
+            "temporal_scope": "immediate",
+            "needs_clarification": False,
+            "clarification_reason": None,
+        })
     # Questions and alternatives are not execution instructions, even when they
     # begin with an imperative verb ("Serang Goblin atau bertahan?").
     # Bypass the generic action-choice guard only when a named entity is
@@ -119,6 +142,7 @@ def interpret_player_command(
     # must be clarified before any proposal is formed.
     if (
         interpretation.get("speech_act") in {"question", "cancellation", "mention"}
+        and not has_conflicting_named_pronoun
         or interpretation.get("temporal_scope") in {"future_intended", "past_or_recounted"}
         or interpretation.get("reason") in {
             "conversational_mention_is_not_an_action_order",
