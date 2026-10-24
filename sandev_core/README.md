@@ -9,7 +9,8 @@ This folder contains executable, model-independent game-intelligence components.
 - Return deterministic action intents with explanations and rejected-candidate lists.
 - Validate a shared, versioned adapter contract for different game genres.
 - Revalidate a proposed intent against the latest snapshot before the host engine considers execution.
-- Assemble a bounded context packet from current state, goals, raw player message, recent verified events, and trusted memory.
+- Assemble a bounded context packet from current state, explicit need urgency, goals, raw player message, recent verified events, and trusted memory.
+- Select curated dialogue lines by validated intent, genre, explicit urgent needs, and trusted context tags—without pretending to understand raw language.
 - Store only engine-confirmed events and player-approved facts in a structured memory ledger.
 - Record engine-confirmed outcomes and apply bounded, smoothed feedback within matching contexts.
 - Run regression scenarios across life simulation, shooter, and RPG decision cases.
@@ -26,6 +27,12 @@ The adapter validates candidate shapes, rejects duplicate IDs and non-finite num
 `context.py` exposes `build_context(...)`, which assembles a versioned JSON-safe packet with game/actor identifiers, current authoritative state, goals, the player's raw message, bounded recent events, and retrieved memories. It preserves the message verbatim within a configurable character limit and marks it as `raw_uninterpreted_input`: context assembly is not language understanding.
 
 Recent events and retrieved memories are included only when their provenance is `engine_confirmed` or `player_approved`. The packet and state have configurable size limits. It does not infer current state from old memory, decide what a message means, generate dialogue, or call a model. Future language behavior can consume this packet and must be evaluated separately.
+
+## Context and language response baseline
+
+`context.py` assembles the current snapshot, explicit need urgency, goals, raw player message, and provenance-checked history. `language.py` selects among authored response patterns using an intent label supplied by a separate validated interpretation layer. It can filter by game, trusted context tags, and urgent needs, with a deterministic tie-break and a safe no-match result.
+
+This is a first language-behavior scaffold, not open-ended language understanding or free-form generation. It does not infer intent from the player message. A future language interpreter must be built and evaluated separately; until then, callers must supply a validated intent label.
 
 ## Engine bridge and trust boundary
 
