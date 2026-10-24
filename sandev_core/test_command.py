@@ -118,6 +118,27 @@ class PlayerCommandTests(unittest.TestCase):
                     "stated_intention_is_not_an_immediate_action_order",
                 )
 
+    def test_language_envelope_is_attached_to_grounded_proposal(self):
+        result = interpret_player_command("Serang Goblin", ENTITIES, context={"game_id": "rpg"})
+        self.assertEqual(result["status"], "proposal")
+        self.assertEqual(result["language"]["speech_act"], "command")
+        self.assertEqual(result["language"]["temporal_scope"], "immediate")
+        self.assertEqual(result["language"]["target_grounding"], "unresolved")
+        self.assertFalse(result["language"]["execution_allowed"])
+        self.assertFalse(result["execution_allowed"])
+
+    def test_past_recounted_action_is_not_promoted_by_explicit_verb_fallback(self):
+        for message in (
+            "Serang Goblin tadi",
+            "Serang Goblin kemarin",
+            "Barusan serang Goblin",
+        ):
+            with self.subTest(message=message):
+                result = interpret_player_command(message, ENTITIES)
+                self.assertNotEqual(result["status"], "proposal")
+                self.assertFalse(result["execution_allowed"])
+                self.assertIn(result["language"]["temporal_scope"], {"past_or_recounted", "unspecified"})
+
     def test_recounted_action_mention_does_not_become_command(self):
         result = interpret_player_command("Serang musuh, aku cuma cerita", ENTITIES)
         self.assertNotEqual(result["status"], "proposal")
