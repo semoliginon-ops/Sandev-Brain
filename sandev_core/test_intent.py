@@ -44,6 +44,26 @@ class IndonesianIntentTests(unittest.TestCase):
         self.assertEqual(normalize_text("  HAI!!!  "), "hai")
         self.assertEqual(normalize_text("Gak apa-apa"), "tidak apa-apa")
 
+
+    def test_recognizes_new_paraphrases_conservatively(self):
+        cases = {
+            "Aku cabut dulu, sampai nanti": "farewell",
+            "Mereka mengepung kita dari belakang!": "danger",
+            "Kondisiku kritis, perlu pemulihan": "heal_request",
+            "Arahkan tembakan ke lawan yang paling dekat": "tactical_attack",
+            "Kita perlu berlindung di balik batu": "tactical_defend",
+            "Aku lagi down, jangan tinggalin aku sendirian": "comfort",
+            "Lempar satu humor receh dong": "banter",
+        }
+        for message, expected in cases.items():
+            with self.subTest(message=message):
+                self.assertEqual(classify_intent(message)["intent"], expected)
+
+    def test_negated_healing_request_is_not_a_heal_command(self):
+        result = classify_intent("Jangan obati aku dulu, aku masih kuat")
+        self.assertEqual(result["status"], "unknown")
+        self.assertEqual(result["intent"], "unknown")
+
     def test_rejects_invalid_inputs(self):
         with self.assertRaises(IntentInputError):
             classify_intent(None)
