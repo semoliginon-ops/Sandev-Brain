@@ -1,7 +1,7 @@
 # SANDEV Brain Core (model-independent)
 
 This folder contains executable, model-independent game-intelligence components.
-It uses only Python's standard library; it does not download/load model weights
+It uses only the Python standard library; it does not download/load model weights
 and does not call a cloud model.
 
 ## Current capability
@@ -12,6 +12,8 @@ and does not call a cloud model.
 - Return deterministic action intents with explanations and rejected-candidate lists.
 - Store only engine-confirmed events and player-approved facts in a structured memory ledger.
 - Retrieve memories by tags and let newer verified facts replace older values.
+- Run a small, hand-labeled regression benchmark spanning life simulation, shooter,
+  and RPG decision cases.
 - Leave world-state changes and action success/failure confirmation to the game engine.
 
 ## Adapter contract
@@ -35,19 +37,31 @@ source. This is a small persistent ledger, not yet a complete belief system:
 advanced contradiction handling, privacy controls, retention policy, and
 relationship-specific memory remain future work.
 
-## Test locally
+## Regression benchmark
 
-From the repository root:
+Run the hand-authored benchmark and view the per-scenario JSON report:
+
+```sh
+PYTHONPATH=sandev_core python -m sandev_core.benchmark
+```
+
+Run tests from the repository root:
 
 ```sh
 PYTHONPATH=sandev_core python -m unittest discover -s sandev_core -v
 PYTHONPATH=smollm python -m unittest discover -s smollm -v
 ```
 
+The benchmark checks eight expected choices across a few structured scenarios.
+Its expected answers are manually authored regression labels, not independent
+human-study results or teacher-model outputs. A perfect score means only that
+the current deterministic baseline matches those eight labels; it is not a
+general intelligence score.
+
 ## Limits — not yet a finished AI
 
 This is a transparent rule/scoring baseline plus verified memory, not general
 language understanding, not trained intelligence, and not evidence that teacher
 capabilities have been transferred. It still needs structured game state and
-pre-authored candidate actions. Next: build a scenario benchmark, test goal
-conflicts and outcome feedback, and expand cross-genre coverage before production.
+pre-authored candidate actions. Next: broaden the benchmark, test outcome
+feedback and goal conflicts, and build reusable genre adapters before production.
