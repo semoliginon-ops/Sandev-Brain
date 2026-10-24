@@ -26,6 +26,31 @@ Lihat [sandev_core/README.md](sandev_core/README.md). Benchmark dapat dijalankan
 
 Ini masih baseline aturan/skor plus memori terverifikasi, **belum kecerdasan umum, belum sistem produksi, dan belum bukti bahwa kemampuan SmolLM2 sudah berhasil dipindahkan**. Pemahaman bahasa terbuka, obrolan companion, dialog spontan, dan kesinambungan kepribadian belum diimplementasikan. Kualitas bahasa Indonesia dan perilaku game harus diuji, bukan diasumsikan.
 
+
+## Siklus proposal perintah dan batas eksekusi
+
+Modul `sandev_core/pending_command_session.py` menghubungkan perintah bahasa Indonesia yang dikenali dengan registry proposal. Proposal mempunyai ID, masa berlaku, dan versi state; pesan baru membatalkan proposal yang masih berstatus `pending`. Status `pending` bukan izin untuk menjalankan aksi.
+
+Host game dapat menggunakan `PendingCommandSession.execute_pending(...)` sebagai gerbang serah-terima. Callback engine wajib melakukan pemeriksaan versi state **secara atomik bersama validasi aturan game dan eksekusi**, lalu mengembalikan `{"confirmed": true|false, "result": {...}}`. Hanya konfirmasi eksplisit dari callback yang menandai proposal selesai.
+
+Contoh pola integrasi:
+
+```python
+from pending_command_session import PendingCommandSession
+
+session = PendingCommandSession()
+
+# Sesudah handle_message menghasilkan status "pending":
+result = session.execute_pending(
+    player_session_id,
+    proposal["action_id"],
+    get_current_state_version=game.get_state_version,
+    engine_execute_if_version_matches=game.validate_and_execute_if_version,
+)
+```
+
+Nama metode pada `game` di atas adalah contoh kontrak host, bukan API yang sudah tersedia di repo. Implementasi host harus memvalidasi target, izin, prasyarat, serta versi state di dalam operasi atomik. Lock di `PendingCommandSession` hanya menyerialisasi pesan dan eksekusi yang menggunakan instance yang sama; lock ini tidak melindungi mutasi dari proses lain. Registry masih in-memory, jadi status proposal tidak bertahan saat proses restart. Ini adalah fondasi integrasi, bukan bukti bahwa game tertentu sudah terhubung.
+
 ## Model kandidat untuk tahap riset
 
 - SmolLM2-360M-Instruct: https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct
