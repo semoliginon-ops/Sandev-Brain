@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping, Sequence
 
-from grounding import GroundingInputError, ground_entities
+from grounding import GroundingInputError, ground_entities, resolve_context_reference
 from intent import IntentInputError, classify_intent, normalize_text
 
 
@@ -46,6 +46,10 @@ def interpret_player_command(
             context={"game_id": context.get("game_id", "unspecified")} if context is not None else None,
         )
         grounding = ground_entities(message, entities)
+        if grounding["status"] == "unresolved" and context is not None:
+            contextual = resolve_context_reference(message, entities, context=context)
+            if contextual["status"] != "unresolved" or contextual["reason"] != "no_supported_context_reference":
+                grounding = contextual
     except (IntentInputError, GroundingInputError) as exc:
         raise CommandInputError(str(exc)) from exc
 
