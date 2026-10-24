@@ -1,0 +1,9 @@
+{
+  "name": "sandev-brain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic simulation-focused character brain for SANDEV Life",
+  "scripts": { "test": "node --test", "demo": "node examples/demo.js" },
+  "engines": { "node": ">=20" }
+}
