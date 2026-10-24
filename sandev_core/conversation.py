@@ -58,7 +58,7 @@ def respond_to_context(
     except LanguageInputError as exc:
         raise ConversationPipelineError(str(exc)) from exc
 
-    if response["status"] != "no_matching_response":
+    if response.get("status") != "no_matching_response":
         return {
             "status": "response_selected",
             "text": response["text"],
