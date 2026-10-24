@@ -1,8 +1,7 @@
 """Conservative interpretation of player commands into engine-checkable proposals.
 
 This layer composes curated intent classification and current-snapshot entity
-grounding. It does not execute commands, infer missing targets, or split a
-multi-step sentence into guessed actions.
+grounding. It does not execute commands or guess missing targets.
 """
 from __future__ import annotations
 
@@ -17,16 +16,11 @@ class CommandInputError(ValueError):
     """Raised when command interpretation inputs are malformed."""
 
 
-_ACTION_INTENTS = {
-    "tactical_attack",
-    "tactical_defend",
-    "heal_request",
-    "help_request",
-}
+_ACTION_INTENTS = {"tactical_attack", "tactical_defend", "heal_request", "help_request"}
 _MULTI_STEP_MARKERS = (
     r"\bkemudian\b",
     r"\blalu\b",
-    r"\ setelah\b",
+    r"\bsetelah\b",
     r"\bsetelah itu\b",
     r"\bsekaligus\b",
     r"\bdan kemudian\b",
@@ -39,14 +33,7 @@ def interpret_player_command(
     *,
     context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a cautious command proposal, never an executable game action.
-
-    Only a confidently matched curated action intent can become a proposal.
-    Multiple-step connectors are withheld for a future planner rather than
-    silently reduced to the first recognized action. A mentioned target must
-    resolve against the supplied current entity list; equal-length competing
-    targets remain ambiguous.
-    """
+    """Return a cautious proposal, never an executable game action."""
     normalized = normalize_text(message)
     if context is not None and not isinstance(context, Mapping):
         raise CommandInputError("context must be an object")
@@ -70,6 +57,18 @@ def interpret_player_command(
             "execution_allowed": False,
         }
 
+    # Narrow imperative grammar: recognize an explicit attack verb even if
+    # the phrase classifier lacks that exact sentence. The target is still
+    # required to resolve against the current entity list below.
+    explicit_attack = re.match(r"^(serang|tembak|hantam|bidik)\b", normalized)
+    if interpretation["status"] != "matched" and explicit_attack:
+        interpretation = {
+            **interpretation,
+            "status": "matched",
+            "intent": "tactical_attack",
+            "reason": "explicit_attack_verb",
+        }
+
     if interpretation["status"] != "matched" or interpretation["intent"] not in _ACTION_INTENTS:
         return {
             "status": "not_a_confident_action",
@@ -81,8 +80,6 @@ def interpret_player_command(
         }
 
     intent = interpretation["intent"]
-    # For combat/defense commands, explicit targets must resolve when entities
-    # are mentioned. Defense can be self-directed without an entity target.
     target_required = intent == "tactical_attack"
     if grounding["status"] == "ambiguous":
         return {
@@ -114,3 +111,18 @@ def interpret_player_command(
         "reason": "single_curated_action_intent_with_current_context",
         "execution_allowed": False,
     }
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    payload = json.load(sys.stdin)
+    if not isinstance(payload, dict):
+        raise CommandInputError("input must be a JSON object")
+    result = interpret_player_command(
+        payload.get("message"),
+        payload.get("entities"),
+        context=payload.get("context"),
+    )
+    print(json.dumps(result, ensure_ascii=False))
