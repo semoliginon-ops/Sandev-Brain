@@ -122,5 +122,37 @@ class MultiStepPlannerTests(unittest.TestCase):
         self.assertEqual(result["reason"], "target_missing_or_not_unique_in_current_snapshot")
 
 
+    def test_step_revalidation_rejects_tampered_intent(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        plan["steps"][0]["proposal"]["intent"] = "delete_world"
+        result = validate_plan_step(plan, 1, ENTITIES, current_state_version=17)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "unsupported_proposal_intent")
+
+    def test_step_revalidation_rejects_target_inconsistent_with_grounding(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        plan["steps"][0]["proposal"]["target"]["entity_id"] = "enemy-1"
+        plan["steps"][0]["proposal"]["target"]["entity_name"] = "Goblin"
+        result = validate_plan_step(plan, 1, ENTITIES, current_state_version=17)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "target_does_not_match_grounding")
+
+    def test_step_revalidation_rejects_targetless_attack(self):
+        from planner import validate_plan_step
+        plan = plan_player_command(
+            "Serang Bandit", ENTITIES, context={"state_version": 17},
+        )
+        plan["steps"][0]["proposal"]["target"] = None
+        result = validate_plan_step(plan, 1, ENTITIES, current_state_version=17)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "action_target_required")
+
+
 if __name__ == "__main__":
     unittest.main()
