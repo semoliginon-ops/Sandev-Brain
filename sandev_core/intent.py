@@ -51,7 +51,7 @@ def _is_negated(normalized_message: str, start: int) -> bool:
 
 
 _COMPOSITIONAL_CUES: dict[str, tuple[tuple[str, ...], ...]] = {
-    'greeting': (('halo', 'hai', 'salam', 'selamat datang', 'apa kabar'), ('pagi', 'siang', 'malam', 'bertemu', 'berjumpa', 'kawan', 'teman')),
+    'greeting': (('halo', 'hai', 'salam', 'selamat datang', 'apa kabar'), ('pagi', 'siang', 'malam', 'bertemu', 'berjumpa', 'kawan', 'teman', 'keadaanmu')),
     'thanks': (('terima kasih', 'berterima kasih', 'menghargai', 'berutang budi'), ('bantuan', 'pertolongan', 'berarti', 'kebaikan', 'dukungan')),
     'farewell': (('pamit', 'undur diri', 'pergi', 'berpisah', 'sampai jumpa', 'sampai berjumpa'), ('dulu', 'nanti', 'besok', 'kembali', 'kesempatan lain', 'melanjutkan perjalanan')),
     'help_request': (('bantu', 'bantuan', 'tolong', 'pertolongan', 'kesulitan', 'kesusahan'), ('selesaikan', 'mengurus', 'mengatasi', 'sendirian', 'membantuku', 'persoalan', 'tugas')),
