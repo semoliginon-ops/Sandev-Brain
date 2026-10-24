@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from adapter import decide_from_snapshot
+from adapter import AdapterInputError, decide_from_snapshot
 from engine_bridge import validate_intent
 
 
@@ -83,6 +83,28 @@ class EngineBridgeTests(unittest.TestCase):
         result = validate_intent(self.snapshot, intent)
         self.assertFalse(result["accepted"])
         self.assertEqual(result["reason"], "intent does not match current candidate")
+
+    def test_non_string_intent_target_is_rejected(self):
+        intent = decide_from_snapshot(self.snapshot)
+        intent["action"]["target"] = ["companion"]
+        result = validate_intent(self.snapshot, intent)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "intent target must be a string")
+
+    def test_non_string_candidate_target_is_rejected(self):
+        intent = decide_from_snapshot(self.snapshot)
+        latest = copy.deepcopy(self.snapshot)
+        latest["candidates"][0]["target"] = ["companion"]
+        result = validate_intent(latest, intent)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "candidate target must be a string")
+
+    def test_malformed_allow_list_is_rejected(self):
+        intent = decide_from_snapshot(self.snapshot)
+        latest = copy.deepcopy(self.snapshot)
+        latest["allowed_actions"] = ["take_cover", None]
+        with self.assertRaisesRegex(AdapterInputError, "allowed_actions must contain non-empty strings"):
+            validate_intent(latest, intent)
 
     def test_engine_bridge_never_claims_execution(self):
         intent = decide_from_snapshot(self.snapshot)
