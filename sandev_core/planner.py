@@ -197,26 +197,6 @@ def validate_plan_step(
     if intent not in allowed_intents:
         return reject("unsupported_proposal_intent")
 
-    # Re-interpret the original step against the current entity snapshot.
-    # Do not trust mutable plan fields as the source of intent/target truth.
-    try:
-        recomputed = interpret_player_command(command, current_entities)
-    except CommandInputError:
-        return reject("step_command_cannot_be_revalidated")
-    if recomputed.get("status") != "proposal":
-        return reject("step_command_no_longer_resolves")
-    if intent != recomputed.get("intent"):
-        return reject("proposal_intent_does_not_match_command")
-    if proposal.get("target") != recomputed.get("target"):
-        return reject("proposal_target_does_not_match_command")
-    proposal_grounding = proposal.get("grounding")
-    recomputed_grounding = recomputed.get("grounding")
-    if not isinstance(proposal_grounding, Mapping) or not isinstance(recomputed_grounding, Mapping):
-        return reject("proposal_grounding_missing")
-    for field in ("status", "entity_id", "entity_name"):
-        if proposal_grounding.get(field) != recomputed_grounding.get(field):
-            return reject("proposal_grounding_does_not_match_command")
-
     target = proposal.get("target")
     if intent in {"tactical_attack", "tactical_defend"} and target is None:
         return reject("action_target_required")
@@ -240,6 +220,27 @@ def validate_plan_step(
             return reject("target_missing_or_not_unique_in_current_snapshot")
         if matches[0].get("name") != target_name:
             return reject("target_identity_changed")
+
+    # Re-interpret after structural checks so malformed/removed targets retain
+    # precise rejection reasons while mutable plan fields remain untrusted.
+    try:
+        recomputed = interpret_player_command(command, current_entities)
+    except CommandInputError:
+        return reject("step_command_cannot_be_revalidated")
+    if recomputed.get("status") != "proposal":
+        return reject("step_command_no_longer_resolves")
+    if intent != recomputed.get("intent"):
+        return reject("proposal_intent_does_not_match_command")
+    if proposal.get("target") != recomputed.get("target"):
+        return reject("proposal_target_does_not_match_command")
+    proposal_grounding = proposal.get("grounding")
+    recomputed_grounding = recomputed.get("grounding")
+    if not isinstance(proposal_grounding, Mapping) or not isinstance(recomputed_grounding, Mapping):
+        return reject("proposal_grounding_missing")
+    for field in ("status", "entity_id", "entity_name"):
+        if proposal_grounding.get(field) != recomputed_grounding.get(field):
+            return reject("proposal_grounding_does_not_match_command")
+
     return {
         "accepted": True,
         "status": "validated_step_proposal_engine_must_check_current_action_legality",
