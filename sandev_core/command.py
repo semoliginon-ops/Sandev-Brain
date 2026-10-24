@@ -102,7 +102,7 @@ def interpret_player_command(
     if (
         target_required
         and grounding["status"] == "grounded"
-        and re.search(r"\\b(dia|dirinya)\\b", normalized)
+        and re.search(r"\b(dia|dirinya)\b", normalized)
     ):
         return {
             "status": "ambiguous_target",
