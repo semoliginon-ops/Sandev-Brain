@@ -10,16 +10,18 @@ SmolLM2-360M-Instruct adalah kandidat **guru/rujukan saat pengembangan** untuk m
 
 ## Implementasi mandiri yang sudah mulai tersedia
 
-Folder `sandev_core/` kini berisi baseline keputusan deterministik yang tidak bergantung pada model:
-- normalisasi urgensi kebutuhan;
-- penilaian kandidat aksi berdasarkan kebutuhan dan tujuan;
+Folder `sandev_core/` kini berisi komponen awal yang tidak bergantung pada model:
+- normalisasi urgensi kebutuhan dan penilaian kandidat aksi berdasarkan kebutuhan/tujuan;
 - pemeriksaan allow-list aksi dan prasyarat state;
-- skor dan alasan keputusan yang dapat diperiksa;
-- fallback aman jika tidak ada aksi yang layak.
+- skor, alasan keputusan, tie-break deterministik, dan fallback jika tidak ada aksi layak;
+- ledger memori persisten yang hanya menerima kejadian terkonfirmasi oleh game engine atau fakta yang disetujui pemain;
+- pencarian memori berdasarkan tag dan penggantian fakta lama oleh fakta baru yang sudah terverifikasi.
 
-Core mengembalikan **niat aksi**, bukan menjalankan aksi atau mengklaim berhasil. Game engine tetap wajib memvalidasi, mengeksekusi, dan mengonfirmasi hasilnya. Lihat [sandev_core/README.md](sandev_core/README.md).
+Core mengembalikan **niat aksi**, bukan menjalankan aksi atau mengklaim berhasil. Game engine tetap wajib memvalidasi, mengeksekusi, dan mengonfirmasi hasilnya. Memori juga sengaja menolak usulan dari model guru sebagai fakta tepercaya.
 
-Ini baru baseline aturan/skor yang transparan, **belum kecerdasan umum, belum sistem produksi, dan belum bukti bahwa kemampuan SmolLM2 sudah berhasil dipindahkan**. Core saat ini memerlukan state terstruktur serta kandidat aksi yang disediakan adapter game.
+Lihat [sandev_core/README.md](sandev_core/README.md).
+
+Ini masih baseline aturan/skor plus memori terverifikasi, **belum kecerdasan umum, belum sistem produksi, dan belum bukti bahwa kemampuan SmolLM2 sudah berhasil dipindahkan**. Core saat ini memerlukan state terstruktur serta kandidat aksi yang disediakan adapter game.
 
 ## Model kandidat untuk tahap riset
 
@@ -42,14 +44,14 @@ Rincian: [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md).
 
 ## Tes
 
-GitHub Actions kini dirancang untuk menjalankan tes core mandiri dan tes harness riset tanpa mengunduh bobot model:
+GitHub Actions menjalankan tes core mandiri dan tes harness riset tanpa mengunduh bobot model:
 
 ```sh
 PYTHONPATH=sandev_core python -m unittest discover -s sandev_core -v
 PYTHONPATH=smollm python -m unittest discover -s smollm -v
 ```
 
-Status tes harus dilihat dari hasil workflow aktual; konfigurasi workflow sendiri bukan bukti semua tes lulus.
+Periksa hasil workflow terbaru untuk status tes aktual.
 
 ## Prinsip tetap
 
