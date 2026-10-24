@@ -35,6 +35,12 @@ class IndonesianIntentTests(unittest.TestCase):
         self.assertEqual(result["status"], "ambiguous")
         self.assertEqual(result["intent"], "unknown")
 
+    def test_action_choice_question_is_not_misread_as_a_command(self):
+        result = classify_intent("Menurutmu, kita perlu menyerang atau bertahan?")
+        self.assertEqual(result["status"], "ambiguous")
+        self.assertEqual(result["intent"], "unknown")
+        self.assertEqual(result["reason"], "action_choice_question_requires_clarification")
+
     def test_immediate_negation_does_not_trigger_attack(self):
         result = classify_intent("jangan serang musuh")
         self.assertEqual(result["status"], "unknown")
