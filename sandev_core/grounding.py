@@ -137,10 +137,10 @@ def resolve_context_reference(
     if context is None:
         context = {}
 
-    pronoun_reference = bool(re.search(r"\\b(dia|dirinya|nya)\\b", normalized))
+    pronoun_reference = bool(re.search(r"\b(dia|dirinya|nya)\\b", normalized))
     behind_enemy_reference = bool(
-        re.search(r"\\bmusuh di belakangnya\\b", normalized)
-        or re.search(r"\\bmusuh belakangnya\\b", normalized)
+        re.search(r"\bmusuh di belakangnya\\b", normalized)
+        or re.search(r"\bmusuh belakangnya\\b", normalized)
     )
     if not pronoun_reference and not behind_enemy_reference:
         return {
