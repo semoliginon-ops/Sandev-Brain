@@ -68,6 +68,12 @@ class PlayerCommandTests(unittest.TestCase):
         self.assertNotEqual(result["status"], "proposal")
         self.assertFalse(result["execution_allowed"])
 
+    def test_trailing_negation_on_explicit_attack_abstains(self):
+        result = interpret_player_command("Serang Goblin, jangan", ENTITIES)
+        self.assertNotEqual(result["status"], "proposal")
+        self.assertFalse(result["execution_allowed"])
+        self.assertEqual(result["reason"], "negated_explicit_attack_requires_clarification")
+
     def test_non_action_chat_is_not_command(self):
         result = interpret_player_command("Halo, apa kabar?", ENTITIES)
         self.assertEqual(result["status"], "not_a_confident_action")
