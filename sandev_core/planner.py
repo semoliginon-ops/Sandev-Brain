@@ -143,3 +143,74 @@ if __name__ == "__main__":
         payload.get("message"), payload.get("entities"),
         context=payload.get("context"), max_steps=payload.get("max_steps", 5),
     ), ensure_ascii=False))
+
+
+def validate_plan_step(
+    plan: Mapping[str, Any],
+    step_index: int,
+    current_entities: Sequence[Mapping[str, Any]],
+    *,
+    current_state_version: Any,
+) -> dict[str, Any]:
+    """Revalidate one proposal's snapshot and target before the engine maps it.
+
+    This guard is not a substitute for engine_bridge.validate_intent: the host
+    engine must still map the proposal to a currently legal candidate and check
+    action preconditions. A plan step is rejected when the snapshot version is
+    missing/stale or the referenced target is no longer uniquely present.
+    """
+    def reject(reason: str) -> dict[str, Any]:
+        return {"accepted": False, "status": "rejected", "reason": reason,
+                "execution_allowed": False}
+
+    if not isinstance(plan, Mapping) or plan.get("status") != "plan_proposal":
+        return reject("invalid_plan")
+    if plan.get("execution_allowed") is not False:
+        return reject("plan_must_remain_non_executable")
+    if not isinstance(step_index, int) or isinstance(step_index, bool) or step_index < 1:
+        return reject("invalid_step_index")
+    steps = plan.get("steps")
+    if not isinstance(steps, list) or step_index > len(steps):
+        return reject("step_index_out_of_range")
+    planned_version = plan.get("state_version")
+    if planned_version is None or current_state_version is None:
+        return reject("state_version_required_for_revalidation")
+    if planned_version != current_state_version:
+        return reject("stale_plan_state_version")
+    if not isinstance(current_entities, (list, tuple)):
+        return reject("current_entities_must_be_a_list")
+
+    step = steps[step_index - 1]
+    if not isinstance(step, Mapping) or step.get("index") != step_index:
+        return reject("malformed_plan_step")
+    proposal = step.get("proposal")
+    if not isinstance(proposal, Mapping) or proposal.get("status") != "proposal":
+        return reject("step_is_not_a_proposal")
+    if proposal.get("execution_allowed") is not False:
+        return reject("step_must_remain_non_executable")
+    target = proposal.get("target")
+    if target is not None:
+        if not isinstance(target, Mapping):
+            return reject("malformed_target_reference")
+        target_id = target.get("entity_id")
+        target_name = target.get("entity_name")
+        if not isinstance(target_id, str) or not target_id or not isinstance(target_name, str):
+            return reject("malformed_target_reference")
+        matches = [
+            entity for entity in current_entities
+            if isinstance(entity, Mapping) and entity.get("id") == target_id
+        ]
+        if len(matches) != 1:
+            return reject("target_missing_or_not_unique_in_current_snapshot")
+        if matches[0].get("name") != target_name:
+            return reject("target_identity_changed")
+    return {
+        "accepted": True,
+        "status": "validated_step_proposal_engine_must_check_current_action_legality",
+        "step_index": step_index,
+        "command": step.get("command"),
+        "proposal": dict(proposal),
+        "state_version": current_state_version,
+        "execution_allowed": False,
+        "engine_requirement": "map_to_current_legal_candidate_and_revalidate_preconditions_before_execution",
+    }
