@@ -1,27 +1,29 @@
 # SANDEV Brain
 
-**Proyek riset kecerdasan mandiri untuk simulasi kehidupan SANDEV Life.**
+**Proyek adaptasi model bahasa terbuka untuk simulasi kehidupan SANDEV Life.**
 
-## Tujuan
-Membangun sistem kecerdasan yang dapat berjalan tanpa mewajibkan pemain memasang AI lokal terpisah atau bergantung pada kuota AI cloud.
+## Kandidat model saat ini
+- **SmolLM2-360M-Instruct** sebagai kandidat pertama untuk adaptasi percakapan, konteks, memori, penalaran, dan aksi game.
+- Lisensi model upstream tercantum sebagai Apache-2.0 pada kartu model resmi: https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct
+- Repo upstream berisi kode pelatihan, evaluasi, dan data: https://github.com/huggingface/smollm
+- Catatan penting: model ini terutama dilatih untuk bahasa Inggris. Kemampuan bahasa Indonesia harus dibangun lewat dataset SANDEV dan dibuktikan melalui evaluasi.
 
-## Fokus Pengembangan
-- Memahami arsitektur dan cara kerja model AI terbuka.
-- Mempelajari kode sumber, bobot model, tokenizer, dan proses pelatihan.
-- Mengembangkan memori karakter dan pemahaman konteks.
-- Membangun sistem penalaran, emosi, tujuan, perencanaan, dan pengambilan keputusan.
-- Membuat karakter yang mampu menjalankan aksi nyata di dalam game.
-- Mengembangkan kemampuan percakapan secara bertahap.
-- Menguji kinerja, penggunaan RAM, ukuran aplikasi, dan kualitas perilaku.
+## Perangkat target
+Samsung A05 dengan RAM 6 GB. Model 360M adalah kandidat yang lebih masuk akal untuk uji inferensi lokal daripada model 7B, tetapi penggunaan RAM, kecepatan, panas, dan kestabilan belum diukur pada perangkat sebenarnya. Pelatihan adapter dilakukan pada lingkungan komputasi yang memadai; ini tidak berarti game harus menggunakan AI cloud saat dimainkan.
 
-## Referensi Riset
-- OLMo: https://github.com/allenai/OLMo
-- OLMoE: https://github.com/allenai/OLMoE
-- Qwen2.5-0.5B-Instruct: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct
+## Implementasi
+Folder [smollm](smollm/README.md) berisi:
+- Pipeline supervised fine-tuning dengan LoRA untuk SmolLM2.
+- Dataset seed bahasa Indonesia dan contoh evaluasi terpisah.
+- Runtime yang meminta keluaran dialog, usulan aksi, dan pembaruan memori dalam JSON.
+- Penyimpanan memori sederhana dan validasi allow-list aksi.
+- Tes runtime yang tidak perlu mengunduh bobot model.
+
+## Status yang jujur
+Pipeline dan contoh dataset adalah fondasi awal, bukan model SANDEV yang sudah selesai dilatih. Dataset masih perlu diperbesar dan dibersihkan. Tes parser tidak membuktikan kualitas kecerdasan model. Adapter harus dilatih, dievaluasi pada skenario yang tidak ada di data training, lalu diuji penggunaan RAM dan latensinya di Samsung A05 sebelum dinyatakan siap.
 
 ## Prinsip
-Kode sumber saja tidak otomatis membawa kecerdasan model. Bobot terlatih, tokenizer, data, dan proses pelatihan juga berperan. Setiap komponen pihak ketiga harus diperiksa lisensi dan ketentuan penggunaannya.
-
-SANDEV Brain akan dikembangkan melalui eksperimen terukur. Tidak ada klaim kesetaraan dengan model AI lain sebelum diuji.
-
-**Target awal:** membangun kecerdasan khusus simulasi kehidupan yang mandiri, konsisten, dan dapat menjalankan aksi game dengan andal.
+- Satu model bahasa yang diadaptasi untuk SANDEV; penyimpanan memori dan validasi aksi adalah bagian dari game engine, bukan model AI kedua.
+- Model hanya mengusulkan aksi; game engine memeriksa, menjalankan, dan mengonfirmasi hasilnya.
+- Jangan menyimpan klaim model sebagai memori faktual sebelum kejadian dikonfirmasi engine.
+- Periksa lisensi model, dataset, kode, dan artefak secara terpisah sebelum redistribusi.
