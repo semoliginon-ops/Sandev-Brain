@@ -27,7 +27,7 @@ class PlayerCommandTests(unittest.TestCase):
         self.assertFalse(result["execution_allowed"])
 
     def test_named_target_and_contextual_pronoun_are_not_silently_collapsed(self):
-        for message in ("Serang dia dan Bandit", "Serang dia atau Goblin"):
+        for message in ("Serang dia dan Bandit", "Serang dia atau Goblin", "Serang dia atau Goblin?"):
             with self.subTest(message=message):
                 result = interpret_player_command(
                     message, ENTITIES, context={"focus_entity_id": "enemy-1"}
