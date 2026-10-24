@@ -31,7 +31,7 @@ Ini masih baseline aturan/skor plus memori terverifikasi, **belum kecerdasan umu
 
 Modul `sandev_core/pending_command_session.py` menghubungkan perintah bahasa Indonesia yang dikenali dengan registry proposal. Proposal mempunyai ID, masa berlaku, dan versi state; pesan baru membatalkan proposal yang masih berstatus `pending`. Status `pending` bukan izin untuk menjalankan aksi.
 
-Host game dapat menggunakan `PendingCommandSession.execute_pending(...)` sebagai gerbang serah-terima. Callback engine wajib melakukan pemeriksaan versi state **secara atomik bersama validasi aturan game dan eksekusi**, lalu mengembalikan `{"confirmed": true|false, "result": {...}}`. Hanya konfirmasi eksplisit dari callback yang menandai proposal selesai.
+Host game dapat menggunakan `PendingCommandSession.execute_pending(...)` sebagai gerbang serah-terima. Callback engine wajib melakukan pemeriksaan versi state **secara atomik bersama validasi aturan game dan eksekusi**, lalu mengembalikan `{"confirmed": true, "result": {}}` (nilai `confirmed` harus boolean). Hanya konfirmasi eksplisit dari callback yang menandai proposal selesai.
 
 Contoh pola integrasi:
 
