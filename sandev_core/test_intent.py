@@ -35,8 +35,14 @@ class IndonesianIntentTests(unittest.TestCase):
         self.assertEqual(result["status"], "ambiguous")
         self.assertEqual(result["intent"], "unknown")
 
+    def test_immediate_negation_does_not_trigger_attack(self):
+        result = classify_intent("jangan serang musuh")
+        self.assertEqual(result["status"], "unknown")
+        self.assertEqual(result["intent"], "unknown")
+
     def test_normalizes_case_and_punctuation(self):
         self.assertEqual(normalize_text("  HAI!!!  "), "hai")
+        self.assertEqual(normalize_text("Gak apa-apa"), "tidak apa-apa")
 
     def test_rejects_invalid_inputs(self):
         with self.assertRaises(IntentInputError):
