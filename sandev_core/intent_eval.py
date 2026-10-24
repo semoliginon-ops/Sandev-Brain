@@ -29,7 +29,7 @@ CASES: tuple[tuple[str, str], ...] = (
     ("Tolong isi lagi tenaga atau darahku", "heal_request"),
     ("Arahkan tembakan ke lawan yang paling dekat", "tactical_attack"),
     ("Hantam dia sebelum dia kabur", "tactical_attack"),
-    ("Jangan maju, tetap di belakangku", "unknown"),
+    ("Jangan maju, tetap di belakangku", "tactical_defend"),
     ("Kita perlu berlindung di balik batu", "tactical_defend"),
     ("Ambil jarak dan tahan posisi dulu", "tactical_defend"),
     ("Aku lagi down, jangan tinggalin aku sendirian", "comfort"),
