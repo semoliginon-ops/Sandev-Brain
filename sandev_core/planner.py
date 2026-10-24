@@ -13,7 +13,7 @@ class PlannerInputError(ValueError):
 
 
 _CONNECTOR = re.compile(r"\s*,?\s+(dan kemudian|setelah itu|lalu|kemudian)\s+", re.IGNORECASE)
-_UNSUPPORTED_CONNECTOR = re.compile(r"\b(sekaligus|setelah)\b", re.IGNORECASE)
+_UNSUPPORTED_CONNECTOR = re.compile(r"\bsekaligus\b", re.IGNORECASE)
 
 
 def _split_steps(message: str, max_steps: int) -> tuple[list[str], list[str]]:
@@ -55,6 +55,13 @@ def plan_player_command(
         raise PlannerInputError("max_steps must be an integer between 1 and 10")
 
     normalized = normalize_text(message)
+    if re.search(r"\\b(lalu|kemudian|dan kemudian|setelah itu)\\s*$", normalized):
+        return {
+            "status": "rejected", "reason": "sequence ends with a connector",
+            "steps": [], "step_count": 0,
+            "state_version": context.get("state_version") if context else None,
+            "execution_allowed": False,
+        }
     if _UNSUPPORTED_CONNECTOR.search(normalized):
         return {
             "status": "needs_clarification", "reason": "unsupported_sequence_connector",
