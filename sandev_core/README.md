@@ -50,6 +50,10 @@ The current interpreter is intentionally narrow: match strength is not a calibra
 
 `semantic_frame.py` maps only confidently matched, supported intent labels plus trusted companion profile data into the composer's bounded frame. Unknown/ambiguous interpretations and unsupported intents abstain; tactical action intents are not converted into conversational lines. Relationship tiers use the engine-confirmed relationship score, and personality tone must be one of the allowed values. This is a controlled adapter, not broader language understanding. Run tests with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_semantic_frame -v`.
 
+
+
+`test_paraphrase_probes.py` adds focused probes for alternate comfort phrasings and nearby ambiguous/unsafe messages. Run with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_paraphrase_probes -v`. These examples are development regression probes, not independent held-out evaluation; a fresh blind test set is still required before claiming generalization.
+
 ## Engine bridge and trust boundary
 
 `engine_bridge.py` checks that an intent still matches the current candidate, current allow-list, and current preconditions. If the snapshot includes `state_version`, a mismatched version rejects stale intents. Its success result means only “validated proposal”; it does not execute the action. The real game engine must enforce its authoritative gameplay rules and confirm the outcome.
