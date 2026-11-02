@@ -47,6 +47,9 @@ The current interpreter is intentionally narrow: match strength is not a calibra
 
 `compositional_dialogue.py` adds an early, bounded sentence-composition experiment. It accepts a game-produced semantic frame (speech act, tone, topic, relationship tier) and combines independently selected phrase components into a new line. It is deterministic, length-bounded, and rejects unsupported frame values; it never inserts raw player text into generated slots. This is compositional phrase grammar—not open-ended language generation, not a general Indonesian parser, and not evidence of LLM-level ability. Run its tests with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_compositional_dialogue -v`.
 
+
+`semantic_frame.py` maps only confidently matched, supported intent labels plus trusted companion profile data into the composer's bounded frame. Unknown/ambiguous interpretations and unsupported intents abstain; tactical action intents are not converted into conversational lines. Relationship tiers use the engine-confirmed relationship score, and personality tone must be one of the allowed values. This is a controlled adapter, not broader language understanding. Run tests with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_semantic_frame -v`.
+
 ## Engine bridge and trust boundary
 
 `engine_bridge.py` checks that an intent still matches the current candidate, current allow-list, and current preconditions. If the snapshot includes `state_version`, a mismatched version rejects stale intents. Its success result means only “validated proposal”; it does not execute the action. The real game engine must enforce its authoritative gameplay rules and confirm the outcome.
