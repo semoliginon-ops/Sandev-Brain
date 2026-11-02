@@ -16,7 +16,8 @@ This folder contains executable, model-independent game-intelligence components.
 - Store only engine-confirmed events and player-approved facts in a structured memory ledger.
 - Record engine-confirmed outcomes and apply bounded, smoothed feedback within matching contexts.
 - Run regression scenarios across life simulation, shooter, and RPG decision cases.
-- Leave execution, world-state changes, and outcome confirmation to the game engine.
+- Coordinate sequential proposals against fresh snapshots while leaving authoritative execution and outcome confirmation to the game engine.
+- Leave world-state changes and outcome confirmation to the game engine.
 
 ## Generic adapter contract
 
@@ -93,6 +94,13 @@ A plan is returned only when every step resolves confidently. If any step has an
 ### Per-step planner revalidation
 
 `planner.py` also exposes `validate_plan_step(plan, step_index, current_entities, current_state_version=...)`. It rejects stale/missing state versions and targets that disappeared, became duplicated, or changed identity. Acceptance means only that the plan step still references the same snapshot and entity; the host engine must still map it to a currently legal action candidate and run `engine_bridge.validate_intent` before execution. After an action changes the world/state version, the remaining command should be re-planned against the new snapshot rather than blindly continuing an old sequence.
+
+
+### Sequential action executor
+
+`sequential_executor.py` exposes `SequentialActionExecutor.execute(plan, get_snapshot=..., execute_step=...)`. It takes the original plan's command text, obtains a fresh engine snapshot for each step, re-interprets that command against the current entities/context, and validates the resulting single-step proposal against that snapshot's state version. It delegates exactly one step at a time and proceeds only when the host callback explicitly returns `{"confirmed": true, "result": {...}}`.
+
+The snapshot callback must provide `state_version` and current `entities`, plus optional current `context`. The engine callback receives the validated proposal, snapshot, and expected version. The host MUST atomically compare the live version, check the current candidate/allow-list/preconditions, execute the action, and return authoritative confirmation. If a target disappears, a command no longer resolves, a callback fails, or the engine does not confirm, the sequence stops and reports already-confirmed steps. This coordinator does not execute game actions, roll back prior steps, or make a multi-step sequence transactional. Run its tests with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_sequential_executor -v`.
 
 
 ### Indonesian intent diagnostic set
