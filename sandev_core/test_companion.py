@@ -73,6 +73,52 @@ class CompanionRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(saved["value"], "ramen")
 
+
+    def test_player_approved_personal_fact_is_available_to_dialogue(self):
+        self.companion.remember_player_approved_fact(
+            "favorite_food", "ramen", source="player_approved", turn=3,
+            tags=["favorite_food"],
+        )
+        patterns = [
+            {"id": "food_memory", "intent": "greeting",
+             "text": "Halo! Nanti kita cari ramen kesukaanmu.",
+             "required_tags": ["favorite_food"], "priority": 5},
+            {"id": "generic", "intent": "greeting", "text": "Halo!", "priority": 1},
+        ]
+        result = self.companion.respond(self.snapshot, "Halo!", patterns)
+        self.assertEqual(result["response"]["id"], "food_memory")
+
+    def test_personality_tags_filter_patterns(self):
+        patterns = [
+            {"id": "curious", "intent": "greeting", "text": "Ada hal baru?",
+             "required_personality_tags": ["curious"], "priority": 5},
+            {"id": "generic", "intent": "greeting", "text": "Halo!", "priority": 1},
+        ]
+        result = self.companion.respond(self.snapshot, "Halo!", patterns)
+        self.assertEqual(result["response"]["id"], "curious")
+
+    def test_relationship_threshold_unlocks_dialogue(self):
+        self.companion.record_confirmed_interaction(
+            "Player helped Aria", source="engine_confirmed", turn=1,
+            relationship_delta=4,
+        )
+        patterns = [
+            {"id": "trusted", "intent": "greeting", "text": "Aku percaya padamu.",
+             "min_relationship": 4, "priority": 5},
+            {"id": "neutral", "intent": "greeting", "text": "Halo, partner.",
+             "max_relationship": 3, "priority": 1},
+        ]
+        result = self.companion.respond(self.snapshot, "Halo!", patterns)
+        self.assertEqual(result["response"]["id"], "trusted")
+
+    def test_relationship_threshold_rejects_invalid_range(self):
+        patterns = [
+            {"id": "bad", "intent": "greeting", "text": "Halo!",
+             "min_relationship": 101},
+        ]
+        with self.assertRaises(CompanionError):
+            self.companion.respond(self.snapshot, "Halo!", patterns)
+
     def test_unknown_input_does_not_guess_dialogue(self):
         result = self.companion.respond(
             self.snapshot, "Ceritakan kisah yang belum pernah ada", PATTERNS
