@@ -122,5 +122,79 @@ class EngineBridgeTests(unittest.TestCase):
         self.assertFalse(result["accepted"])
 
 
+class LanguageProposalResolutionTests(unittest.TestCase):
+    def setUp(self):
+        self.snapshot = {
+            "game_id": "rpg-demo",
+            "state_version": "world-4",
+            "state": {"hero": {"mp": 10}, "enemy": {"alive": True}},
+            "allowed_actions": ["attack", "defend", "heal"],
+            "candidates": [
+                {"action_id": "attack-goblin", "kind": "attack", "target": "enemy-1",
+                 "preconditions": {"enemy.alive": True}},
+                {"action_id": "attack-bandit", "kind": "attack", "target": "enemy-2",
+                 "preconditions": {"enemy.alive": True}},
+                {"action_id": "heal-self", "kind": "heal", "target": "",
+                 "preconditions": {"hero.mp": {"min": 5}}},
+            ],
+        }
+        self.proposal = {
+            "status": "proposal", "intent": "tactical_attack",
+            "target": {"entity_id": "enemy-1", "entity_name": "Goblin"},
+            "execution_allowed": False,
+        }
+        self.mapping = {"tactical_attack": "attack", "heal_request": "heal"}
+
+    def test_maps_grounded_target_to_unique_current_candidate(self):
+        from engine_bridge import resolve_language_proposal
+        result = resolve_language_proposal(self.snapshot, self.proposal, action_type_map=self.mapping)
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["action_id"], "attack-goblin")
+        self.assertEqual(result["action"], {"type": "attack", "target": "enemy-1"})
+        self.assertEqual(result["state_version"], "world-4")
+
+    def test_rejects_missing_or_ambiguous_candidate(self):
+        from engine_bridge import resolve_language_proposal
+        self.snapshot["candidates"].append({
+            **self.snapshot["candidates"][0], "action_id": "duplicate-attack"
+        })
+        result = resolve_language_proposal(self.snapshot, self.proposal, action_type_map=self.mapping)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["candidate_match_count"], 2)
+
+    def test_rejects_action_outside_current_allow_list_and_failed_precondition(self):
+        from engine_bridge import resolve_language_proposal
+        self.snapshot["allowed_actions"] = ["defend"]
+        result = resolve_language_proposal(self.snapshot, self.proposal, action_type_map=self.mapping)
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["reason"], "action not in current allow-list")
+        self.snapshot["allowed_actions"] = ["attack"]
+        self.snapshot["state"]["enemy"]["alive"] = False
+        result = resolve_language_proposal(self.snapshot, self.proposal, action_type_map=self.mapping)
+        self.assertFalse(result["accepted"])
+
+    def test_rejects_unmapped_intent_and_unsafe_proposal(self):
+        from engine_bridge import resolve_language_proposal
+        result = resolve_language_proposal(
+            self.snapshot, self.proposal, action_type_map={"heal_request": "heal"}
+        )
+        self.assertFalse(result["accepted"])
+        result = resolve_language_proposal(
+            self.snapshot, {**self.proposal, "execution_allowed": True},
+            action_type_map=self.mapping,
+        )
+        self.assertFalse(result["accepted"])
+
+    def test_untargeted_proposal_requires_empty_target_candidate(self):
+        from engine_bridge import resolve_language_proposal
+        proposal = {
+            "status": "proposal", "intent": "heal_request",
+            "target": None, "execution_allowed": False,
+        }
+        result = resolve_language_proposal(self.snapshot, proposal, action_type_map=self.mapping)
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["action_id"], "heal-self")
+
+
 if __name__ == "__main__":
     unittest.main()
