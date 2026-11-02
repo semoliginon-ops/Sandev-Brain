@@ -12,6 +12,8 @@ from context import build_context
 from intent import classify_intent
 from language import select_response
 from memory import MemoryLedger
+from compositional_dialogue import compose_dialogue
+from semantic_frame import build_semantic_frame
 
 
 class CompanionError(ValueError):
@@ -145,4 +147,54 @@ class CompanionRuntime:
             "relationship_score": self._relationship_score(),
             "memory_count": len(self.memory.export()),
             "reason": "authored_personality_line_selected_with_verified_memory",
+        }
+
+
+    def respond_composed(
+        self,
+        snapshot: Mapping[str, Any],
+        player_message: str,
+        *,
+        turn: int,
+    ) -> dict[str, Any]:
+        """Compose a bounded line from a confidently classified player message.
+
+        This is an experimental phrase-grammar path. It abstains on unknown,
+        ambiguous, action, and otherwise unsupported intents.
+        """
+        context = build_context(
+            snapshot, actor_id=self.companion_id, player_message=player_message,
+            memory_ledger=self.memory, memory_tags=[],
+        )
+        interpretation = classify_intent(
+            player_message, context={"game_id": context.get("game_id", "unspecified")}
+        )
+        tone = self.personality if self.personality in {"warm", "neutral", "dry"} else "neutral"
+        frame_result = build_semantic_frame(
+            interpretation,
+            speaker_id=self.companion_id,
+            turn=turn,
+            personality=tone,
+            relationship_score=self._relationship_score(),
+        )
+        if frame_result.get("status") != "frame_ready":
+            return {
+                "status": "no_response",
+                "text": None,
+                "interpretation": interpretation,
+                "frame_result": frame_result,
+                "reason": "no_safe_compositional_frame",
+                "companion": self.companion_id,
+            }
+        composed = compose_dialogue(frame_result["frame"])
+        return {
+            "status": "composed_response",
+            "text": composed["text"],
+            "interpretation": interpretation,
+            "frame_result": frame_result,
+            "composition": composed,
+            "companion": self.companion_id,
+            "personality": self.personality,
+            "relationship_score": self._relationship_score(),
+            "reason": "bounded_compositional_phrase_grammar",
         }
