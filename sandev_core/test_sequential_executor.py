@@ -128,5 +128,35 @@ class SequentialActionExecutorTests(unittest.TestCase):
         self.assertEqual(result["error_type"], "RuntimeError")
 
 
+    def test_executor_can_gate_each_step_through_engine_bridge(self):
+        from engine_bridge import resolve_language_proposal
+        plan = self.make_plan()
+        self.snapshot["candidates"] = [
+            {"action_id": "attack-enemy-1", "kind": "attack", "target": "enemy-1",
+             "preconditions": {"combat.enabled": True}},
+            {"action_id": "attack-enemy-2", "kind": "attack", "target": "enemy-2",
+             "preconditions": {"combat.enabled": True}},
+        ]
+        self.snapshot["allowed_actions"] = ["attack"]
+        self.snapshot["state"] = {"combat": {"enabled": True}}
+        checked = []
+
+        def engine(proposal, snapshot, expected_version):
+            validation = resolve_language_proposal(
+                snapshot, proposal, action_type_map={"tactical_attack": "attack"},
+            )
+            self.assertTrue(validation["accepted"])
+            self.assertEqual(validation["state_version"], expected_version)
+            checked.append(validation["action_id"])
+            self.snapshot["state_version"] += 1
+            return {"confirmed": True, "result": {"action_id": validation["action_id"]}}
+
+        result = self.executor.execute(
+            plan, get_snapshot=lambda: self.snapshot, execute_step=engine,
+        )
+        self.assertTrue(result["accepted"])
+        self.assertEqual(checked, ["attack-enemy-1", "attack-enemy-2"])
+
+
 if __name__ == "__main__":
     unittest.main()
