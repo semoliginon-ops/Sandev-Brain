@@ -85,7 +85,7 @@ class CompanionRuntime:
     ) -> dict[str, Any]:
         context = build_context(
             snapshot, actor_id=self.companion_id, player_message=player_message,
-            memory_ledger=self.memory, memory_tags=["relationship"],
+            memory_ledger=self.memory, memory_tags=[],
         )
         interpretation = classify_intent(
             player_message, context={"game_id": context.get("game_id", "unspecified")}
@@ -105,6 +105,24 @@ class CompanionRuntime:
                 raise CompanionError("each response pattern must be an object")
             required_personality = pattern.get("personality")
             if required_personality is not None and required_personality != self.personality:
+                continue
+            required_tags = pattern.get("required_personality_tags", [])
+            if (not isinstance(required_tags, (list, tuple, set))
+                    or isinstance(required_tags, str)
+                    or any(not isinstance(tag, str) for tag in required_tags)):
+                raise CompanionError("required_personality_tags must be a sequence of strings")
+            if not set(required_tags).issubset(self.personality_tags):
+                continue
+            score = self._relationship_score()
+            minimum = pattern.get("min_relationship")
+            maximum = pattern.get("max_relationship")
+            for field, value in (("min_relationship", minimum), ("max_relationship", maximum)):
+                if value is not None and (isinstance(value, bool) or not isinstance(value, int)
+                                          or not -100 <= value <= 100):
+                    raise CompanionError(f"{field} must be an integer from -100 to 100")
+            if minimum is not None and score < minimum:
+                continue
+            if maximum is not None and score > maximum:
                 continue
             compatible.append(pattern)
         response = select_response(
