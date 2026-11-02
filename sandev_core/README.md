@@ -113,3 +113,15 @@ This is the boundary between language meaning and game-specific mechanics: SANDE
 ### Indonesian intent diagnostic set
 
 `heldout_intent_eval.py` contains 30 manually authored examples and reports overall accuracy, per-label accuracy, statuses, a confusion matrix, and every mismatch. The initial results have now been inspected, so treat this set as a diagnostic—not a pristine holdout or statistically representative benchmark. Run it with `PYTHONPATH=sandev_core python -m heldout_intent_eval`. Unknown predictions count as incorrect for examples with a specific expected intent. After further rule iteration, create a newly authored holdout before making generalization claims.
+
+### Deterministic RPG runtime simulator
+
+`game_runtime.py` provides a small end-to-end RPG simulator with a player, Goblin, Bandit, and one healing potion. It accepts a narrow Indonesian command, grounds the target against the current world, maps the language proposal to one current engine candidate, validates the allow-list/version/preconditions, and mutates the world only inside the engine callback. The callback returns explicit confirmation; the simulator then produces a short authored result line and a fresh world snapshot.
+
+Try it from the repository root:
+
+```sh
+PYTHONPATH=sandev_core python -m game_runtime
+```
+
+Enter one command per line, such as `Serang Goblin` or `Pulihkan HP`. The simulator is a deterministic integration proof, not open-ended NPC language generation, a production game engine, or evidence of LLM-level language ability. Its command grammar and response lines remain limited and authored. Tests run with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_game_runtime -v`.
