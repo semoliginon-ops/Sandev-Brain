@@ -129,7 +129,7 @@ Enter one command per line, such as `Serang Goblin` or `Pulihkan HP`. The simula
 
 ### Companion personality and verified relationship memory
 
-`companion.py` composes the bounded context builder, verified memory ledger, intent classifier, and curated response selector for one companion. A game may record a relationship event only after its engine confirms the interaction; each relationship adjustment is limited to -5..+5 and the accumulated score is clamped to -100..100. Personal facts require explicit `player_approved` provenance. Dialogue patterns may declare a `personality` field so the companion selects only compatible authored lines, with generic patterns available as fallback.
+`companion.py` composes the bounded context builder, verified memory ledger, intent classifier, and curated response selector for one companion. A game may record a relationship event only after its engine confirms the interaction; each relationship adjustment is limited to -5..+5 and the accumulated score is clamped to -100..100. Personal facts require explicit `player_approved` provenance. Dialogue patterns may declare a `personality` field and `required_personality_tags` so the companion selects only compatible authored lines. Optional `min_relationship` and `max_relationship` bounds (integers from -100 to 100) gate lines by the current engine-confirmed relationship score. Generic patterns remain available as fallback. All verified facts—not only relationship-tagged events—are included in the bounded memory context, so player-approved details can influence dialogue when a pattern requires their tags.
 
 Example:
 
