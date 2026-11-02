@@ -103,6 +103,13 @@ A plan is returned only when every step resolves confidently. If any step has an
 The snapshot callback must provide `state_version` and current `entities`, plus optional current `context`. The engine callback receives the validated proposal, snapshot, and expected version. The host MUST atomically compare the live version, check the current candidate/allow-list/preconditions, execute the action, and return authoritative confirmation. If a target disappears, a command no longer resolves, a callback fails, or the engine does not confirm, the sequence stops and reports already-confirmed steps. This coordinator does not execute game actions, roll back prior steps, or make a multi-step sequence transactional. Run its tests with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_sequential_executor -v`.
 
 
+### Language proposal to live engine candidate mapping
+
+`engine_bridge.py` exposes `resolve_language_proposal(snapshot, proposal, action_type_map=...)`. Each game integration must explicitly map language intents (for example, `tactical_attack`) to its own engine action kinds (for example, `attack`). The bridge then requires exactly one current candidate with the mapped kind and grounded entity ID as its target, and passes that candidate through the existing allow-list, state-version, and precondition checks in `validate_intent`. Untargeted proposals match only candidates with an empty target. Missing, duplicate, unmapped, stale, disallowed, or infeasible candidates are rejected.
+
+This is the boundary between language meaning and game-specific mechanics: SANDEV does not assume every game uses the same action names. The game still owns the mapping and must atomically revalidate and execute the returned validated candidate. A successful bridge result is not an execution confirmation. The sequential executor's `execute_step` callback can call this resolver before asking the host engine to execute each step. Tests cover grounded-target mapping, duplicate candidates, allow-list/precondition rejection, and sequential use of the bridge.
+
+
 ### Indonesian intent diagnostic set
 
 `heldout_intent_eval.py` contains 30 manually authored examples and reports overall accuracy, per-label accuracy, statuses, a confusion matrix, and every mismatch. The initial results have now been inspected, so treat this set as a diagnostic—not a pristine holdout or statistically representative benchmark. Run it with `PYTHONPATH=sandev_core python -m heldout_intent_eval`. Unknown predictions count as incorrect for examples with a specific expected intent. After further rule iteration, create a newly authored holdout before making generalization claims.
