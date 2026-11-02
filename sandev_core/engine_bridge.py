@@ -76,3 +76,59 @@ def validate_intent(snapshot: Mapping[str, Any], intent: Mapping[str, Any]) -> d
         "action": {"type": action["type"], "target": target},
         "state_version": snapshot.get("state_version"),
     }
+
+
+def resolve_language_proposal(
+    snapshot: Mapping[str, Any],
+    proposal: Mapping[str, Any],
+    *,
+    action_type_map: Mapping[str, str],
+) -> dict[str, Any]:
+    """Map a grounded language proposal to one unique current engine candidate.
+
+    Games must explicitly provide intent->action-kind mappings. Targeted
+    proposals match candidate.target to the grounded entity_id; untargeted
+    proposals match the empty target. The returned object is validation only.
+    """
+    if not isinstance(snapshot, Mapping) or not isinstance(proposal, Mapping):
+        raise AdapterInputError("snapshot and proposal must be objects")
+    if proposal.get("status") != "proposal" or proposal.get("execution_allowed") is not False:
+        return {"accepted": False, "status": "rejected", "reason": "language proposal is not safely actionable"}
+    if not isinstance(action_type_map, Mapping):
+        raise AdapterInputError("action_type_map must be an object")
+    intent_name = proposal.get("intent")
+    action_type = action_type_map.get(intent_name)
+    if not isinstance(action_type, str) or not action_type.strip():
+        return {"accepted": False, "status": "rejected", "reason": "intent has no game action mapping"}
+
+    target_ref = proposal.get("target")
+    if target_ref is None:
+        target_id = ""
+    elif isinstance(target_ref, Mapping) and isinstance(target_ref.get("entity_id"), str):
+        target_id = target_ref["entity_id"]
+    else:
+        return {"accepted": False, "status": "rejected", "reason": "malformed grounded target"}
+
+    candidates = snapshot.get("candidates")
+    if not isinstance(candidates, (list, tuple)):
+        raise AdapterInputError("snapshot candidates must be a list")
+    matches = [
+        candidate for candidate in candidates
+        if isinstance(candidate, Mapping)
+        and candidate.get("kind") == action_type
+        and candidate.get("target", "") == target_id
+    ]
+    if len(matches) != 1:
+        return {
+            "accepted": False, "status": "rejected",
+            "reason": "no_unique_current_candidate_for_language_proposal",
+            "candidate_match_count": len(matches),
+        }
+    candidate = matches[0]
+    intent = {
+        "contract_version": "1.0",
+        "action_id": candidate.get("action_id"),
+        "action": {"type": action_type, "target": target_id},
+        "state_version": snapshot.get("state_version"),
+    }
+    return validate_intent(snapshot, intent)
