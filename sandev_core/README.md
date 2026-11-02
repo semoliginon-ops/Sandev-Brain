@@ -45,6 +45,8 @@ The current interpreter is intentionally narrow: match strength is not a calibra
 
 `language.py` selects among authored response patterns using the intent label supplied by the interpreter/caller. It can filter by game, trusted context tags, and urgent needs, with a deterministic tie-break and safe no-match result. This selector does not generate new sentences. Open-ended companion chat, spontaneous dialogue, broad Indonesian fluency, and personality consistency are not yet demonstrated.
 
+`compositional_dialogue.py` adds an early, bounded sentence-composition experiment. It accepts a game-produced semantic frame (speech act, tone, topic, relationship tier) and combines independently selected phrase components into a new line. It is deterministic, length-bounded, and rejects unsupported frame values; it never inserts raw player text into generated slots. This is compositional phrase grammar—not open-ended language generation, not a general Indonesian parser, and not evidence of LLM-level ability. Run its tests with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_compositional_dialogue -v`.
+
 ## Engine bridge and trust boundary
 
 `engine_bridge.py` checks that an intent still matches the current candidate, current allow-list, and current preconditions. If the snapshot includes `state_version`, a mismatched version rejects stale intents. Its success result means only “validated proposal”; it does not execute the action. The real game engine must enforce its authoritative gameplay rules and confirm the outcome.
