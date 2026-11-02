@@ -125,3 +125,29 @@ PYTHONPATH=sandev_core python -m game_runtime
 ```
 
 Enter one command per line, such as `Serang Goblin` or `Pulihkan HP`. The simulator is a deterministic integration proof, not open-ended NPC language generation, a production game engine, or evidence of LLM-level language ability. Its command grammar and response lines remain limited and authored. Tests run with `PYTHONPATH=sandev_core python -m unittest sandev_core.test_game_runtime -v`.
+
+
+### Companion personality and verified relationship memory
+
+`companion.py` composes the bounded context builder, verified memory ledger, intent classifier, and curated response selector for one companion. A game may record a relationship event only after its engine confirms the interaction; each relationship adjustment is limited to -5..+5 and the accumulated score is clamped to -100..100. Personal facts require explicit `player_approved` provenance. Dialogue patterns may declare a `personality` field so the companion selects only compatible authored lines, with generic patterns available as fallback.
+
+Example:
+
+```python
+companion = CompanionRuntime(
+    "save/aria-memory.json",
+    companion_id="npc_aria",
+    personality="warm",
+    personality_tags=["kind", "curious"],
+)
+companion.record_confirmed_interaction(
+    "Player saved Aria from a goblin",
+    source="engine_confirmed",
+    turn=12,
+    relationship_delta=3,
+    tags=["rescue"],
+)
+result = companion.respond(snapshot, "Halo!", response_patterns)
+```
+
+This layer gives NPCs persistent, provenance-checked history and a simple relationship signal, but dialogue remains selected from authored patterns. It does not yet create new sentences, infer emotional states from arbitrary conversation, or prove human-level relationship understanding. Tests: `PYTHONPATH=sandev_core python -m unittest sandev_core.test_companion -v`.
