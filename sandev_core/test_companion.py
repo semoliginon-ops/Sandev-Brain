@@ -119,6 +119,30 @@ class CompanionRuntimeTests(unittest.TestCase):
         with self.assertRaises(CompanionError):
             self.companion.respond(self.snapshot, "Halo!", patterns)
 
+    def test_composed_response_uses_validated_intent_and_profile(self):
+        self.companion.record_confirmed_interaction(
+            "Player helped Aria", source="engine_confirmed", turn=1,
+            relationship_delta=30,
+        )
+        result = self.companion.respond_composed(
+            self.snapshot, "Halo!", turn=2,
+        )
+        self.assertEqual(result["status"], "composed_response")
+        self.assertTrue(result["text"])
+        self.assertEqual(result["frame_result"]["frame"]["relationship"], "close")
+        self.assertFalse(result["composition"]["is_open_ended_generation"])
+
+    def test_composed_response_abstains_on_unknown_or_action_intent(self):
+        unknown = self.companion.respond_composed(
+            self.snapshot, "Ceritakan sesuatu yang belum pernah ada", turn=1,
+        )
+        action = self.companion.respond_composed(
+            self.snapshot, "Serang musuh", turn=2,
+        )
+        self.assertEqual(unknown["status"], "no_response")
+        self.assertEqual(action["status"], "no_response")
+        self.assertIsNone(action["text"])
+
     def test_unknown_input_does_not_guess_dialogue(self):
         result = self.companion.respond(
             self.snapshot, "Ceritakan kisah yang belum pernah ada", PATTERNS
