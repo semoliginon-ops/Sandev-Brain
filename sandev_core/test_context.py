@@ -87,9 +87,33 @@ class ContextPacketTests(unittest.TestCase):
             max_conversation_turns=2,
         )
         self.assertEqual([x["text"] for x in packet["conversation_history"]],
-                         ["Kamu tinggal di mana?", "Di desa utara."])
+                         ["Di desa utara.", "Siapa yang tinggal bersamamu?"])
         self.assertTrue(all(x["trust"] == "unverified_dialogue"
                             for x in packet["conversation_history"]))
+
+    def test_context_keeps_latest_dialogue_turns_not_oldest_prefix(self):
+        history = [
+            {"speaker": "player", "text": f"Pesan lama {i}", "turn": i}
+            for i in range(30)
+        ]
+        packet = build_context(
+            {"state": {}}, actor_id="aria",
+            conversation_history=history, max_conversation_turns=4,
+        )
+        self.assertEqual(
+            [item["text"] for item in packet["conversation_history"]],
+            ["Pesan lama 26", "Pesan lama 27", "Pesan lama 28", "Pesan lama 29"],
+        )
+
+    def test_zero_dialogue_budget_retains_no_turns(self):
+        packet = build_context(
+            {"state": {}}, actor_id="aria",
+            conversation_history=[
+                {"speaker": "player", "text": "Halo", "turn": 1},
+            ],
+            max_conversation_turns=0,
+        )
+        self.assertEqual(packet["conversation_history"], [])
 
     def test_rejects_malformed_dialogue_history(self):
         with self.assertRaises(ContextInputError):
