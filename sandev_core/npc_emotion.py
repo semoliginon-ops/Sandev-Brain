@@ -115,10 +115,19 @@ class NPCEmotionLedger:
         previous_turn = record.get("turn", turn)
         if isinstance(previous_turn, bool) or not isinstance(previous_turn, int) or previous_turn < 0:
             previous_turn = turn
-        self._decay(values, max(0, turn - previous_turn))
+        decay_turn = record.get("decay_turn", previous_turn)
+        if isinstance(decay_turn, bool) or not isinstance(decay_turn, int) or decay_turn < 0:
+            decay_turn = previous_turn
+        elapsed = max(0, turn - decay_turn)
+        decay_steps = elapsed // self.decay_interval
+        self._decay(values, decay_steps * self.decay_interval)
+        decay_turn += decay_steps * self.decay_interval
         for name, delta in EMOTION_DELTAS[event_type].items():
             values[name] = max(0, min(100, values[name] + delta))
-        self.states[key] = {"values": values, "turn": max(turn, previous_turn)}
+        self.states[key] = {
+            "values": values, "turn": max(turn, previous_turn),
+            "decay_turn": decay_turn,
+        }
         self._save()
         return self.snapshot(npc_id, player_id, current_turn=turn)
 
@@ -147,8 +156,12 @@ class NPCEmotionLedger:
         last_turn = record.get("turn", 0)
         if isinstance(last_turn, bool) or not isinstance(last_turn, int) or last_turn < 0:
             last_turn = 0
+        decay_turn = record.get("decay_turn", last_turn)
+        if isinstance(decay_turn, bool) or not isinstance(decay_turn, int) or decay_turn < 0:
+            decay_turn = last_turn
         if current_turn is not None:
-            self._decay(values, max(0, current_turn - last_turn))
+            elapsed = max(0, current_turn - decay_turn)
+            self._decay(values, (elapsed // self.decay_interval) * self.decay_interval)
         return {
             "npc_id": npc_id,
             "player_id": player_id,
