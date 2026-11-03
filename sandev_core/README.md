@@ -162,3 +162,8 @@ result = companion.respond(snapshot, "Halo!", response_patterns)
 ```
 
 This layer gives NPCs persistent, provenance-checked history and a simple relationship signal, but dialogue remains selected from authored patterns. It does not yet create new sentences, infer emotional states from arbitrary conversation, or prove human-level relationship understanding. Tests: `PYTHONPATH=sandev_core python -m unittest sandev_core.test_companion -v`.
+
+
+## NPC daily life and autonomous routine proposals
+
+`npc_routine.py` exposes `propose_routine(context, allowed_activities=...)`. A game supplies an NPC ID, the current in-game minute (0–1439), weekday (0–6), flat authoritative state facts, a trusted schedule list, and an independent activity allow-list. Schedule entries require `activity_id`, same-day `start_minute`/`end_minute`, `source` (`engine_confirmed` or `player_approved`), and matching `npc_id`; optional `days`, `priority` (0–100), `active`, and exact-match `conditions` refine eligibility. Windows include the start and exclude the end; overnight routines should be split across two days. Highest priority wins, then the narrower time window, then stable activity ID. Untrusted, wrong-NPC, inactive, condition-mismatched, or disallowed entries cannot be proposed. Missing eligible routines abstain. The proposal is returned separately under `npc_routine`, with `execution: not_performed`; the host engine must revalidate current time, world state, NPC availability, and activity legality before execution. Omitting `npc_routine` preserves the legacy adapter response. Tests: `PYTHONPATH=sandev_core python -m unittest sandev_core.test_npc_routine -v`.
