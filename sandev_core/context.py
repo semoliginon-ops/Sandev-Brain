@@ -12,6 +12,8 @@ TRUSTED_SOURCES = {"engine_confirmed", "player_approved"}
 DEFAULT_MAX_MESSAGE_CHARS = 2000
 DEFAULT_MAX_STATE_BYTES = 24_000
 DEFAULT_MAX_CONTEXT_BYTES = 48_000
+DEFAULT_MAX_CONVERSATION_TURNS = 12
+DEFAULT_MAX_DIALOGUE_CHARS = 2000
 
 
 class ContextInputError(ValueError):
@@ -49,6 +51,8 @@ def build_context(
     recent_events: Iterable[Mapping[str, Any]] = (),
     max_memories: int = 8,
     max_recent_events: int = 8,
+    conversation_history: Iterable[Mapping[str, Any]] = (),
+    max_conversation_turns: int = DEFAULT_MAX_CONVERSATION_TURNS,
     max_message_chars: int = DEFAULT_MAX_MESSAGE_CHARS,
     max_state_bytes: int = DEFAULT_MAX_STATE_BYTES,
     max_context_bytes: int = DEFAULT_MAX_CONTEXT_BYTES,
@@ -69,6 +73,7 @@ def build_context(
     if max_message_chars < 0 or len(player_message) > max_message_chars:
         raise ContextInputError("player_message exceeds the configured character limit")
     for name, value in (("max_memories", max_memories), ("max_recent_events", max_recent_events),
+                        ("max_conversation_turns", max_conversation_turns),
                         ("max_state_bytes", max_state_bytes), ("max_context_bytes", max_context_bytes)):
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             raise ContextInputError(f"{name} must be a non-negative integer")
@@ -116,6 +121,27 @@ def build_context(
                 continue
             memories.append(_json_copy(dict(item), "memory item"))
 
+    dialogue: list[dict[str, Any]] = []
+    if isinstance(conversation_history, (str, bytes)):
+        raise ContextInputError("conversation_history must be an iterable of dialogue objects")
+    try:
+        for item in conversation_history:
+            if len(dialogue) >= max_conversation_turns:
+                break
+            if not isinstance(item, Mapping):
+                raise ContextInputError("each conversation turn must be an object")
+            speaker, message, turn = item.get("speaker"), item.get("text"), item.get("turn")
+            if speaker not in {"player", "npc"}:
+                raise ContextInputError("conversation speaker must be player or npc")
+            if not isinstance(message, str) or not message.strip() or len(message) > DEFAULT_MAX_DIALOGUE_CHARS:
+                raise ContextInputError("conversation text must be non-empty and within the character limit")
+            if isinstance(turn, bool) or not isinstance(turn, int) or turn < 0:
+                raise ContextInputError("conversation turn must be a non-negative integer")
+            dialogue.append({"speaker": speaker, "text": message, "turn": turn,
+                             "trust": "unverified_dialogue"})
+    except TypeError as exc:
+        raise ContextInputError("conversation_history must be iterable") from exc
+
     packet = {
         "context_version": "1.0",
         "game_id": snapshot.get("game_id", "unspecified"),
@@ -127,6 +153,7 @@ def build_context(
         "player_message": player_message,
         "player_message_status": "raw_uninterpreted_input",
         "recent_events": events,
+        "conversation_history": dialogue,
         "memories": memories,
         "memory_tags_used": tags,
     }
