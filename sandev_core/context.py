@@ -50,6 +50,7 @@ def build_context(
     memory_tags: Iterable[str] = (),
     npc_memory_ledger: Any = None,
     npc_relationship_ledger: Any = None,
+    npc_emotion_ledger: Any = None,
     npc_id: str | None = None,
     player_id: str | None = None,
     npc_memory_current_turn: int | None = None,
@@ -129,7 +130,9 @@ def build_context(
 
     npc_memories: list[dict[str, Any]] = []
     relationship = None
-    scoped_requested = npc_memory_ledger is not None or npc_relationship_ledger is not None
+    emotion = None
+    scoped_requested = (npc_memory_ledger is not None or npc_relationship_ledger is not None
+                        or npc_emotion_ledger is not None)
     if scoped_requested:
         if not isinstance(npc_id, str) or not npc_id.strip() or not isinstance(player_id, str) or not player_id.strip():
             raise ContextInputError("npc_id and player_id are required for NPC-scoped context")
@@ -148,6 +151,14 @@ def build_context(
         if not callable(snapshot_relationship):
             raise ContextInputError("npc_relationship_ledger must provide snapshot(npc_id, player_id)")
         relationship = _json_copy(snapshot_relationship(npc_id, player_id), "NPC relationship")
+    if npc_emotion_ledger is not None:
+        snapshot_emotion = getattr(npc_emotion_ledger, "snapshot", None)
+        if not callable(snapshot_emotion):
+            raise ContextInputError("npc_emotion_ledger must provide snapshot(npc_id, player_id, ...)")
+        emotion = _json_copy(
+            snapshot_emotion(npc_id, player_id, current_turn=npc_memory_current_turn),
+            "NPC emotional state",
+        )
 
     dialogue: list[dict[str, Any]] = []
     if isinstance(conversation_history, (str, bytes)):
@@ -185,6 +196,7 @@ def build_context(
         "memories": memories,
         "npc_memories": npc_memories,
         "npc_relationship": relationship,
+        "npc_emotion": emotion,
         "memory_tags_used": tags,
     }
     packet = _json_copy(packet, "context packet")
