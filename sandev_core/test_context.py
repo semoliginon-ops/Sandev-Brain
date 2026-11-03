@@ -75,6 +75,26 @@ class ContextPacketTests(unittest.TestCase):
         with self.assertRaises(ContextInputError):
             build_context({"state": {"blob": "x" * 100}}, actor_id="hero", max_state_bytes=10)
 
+    def test_includes_bounded_dialogue_as_unverified_context(self):
+        history = [
+            {"speaker": "player", "text": "Kamu tinggal di mana?", "turn": 1},
+            {"speaker": "npc", "text": "Di desa utara.", "turn": 1},
+            {"speaker": "player", "text": "Siapa yang tinggal bersamamu?", "turn": 2},
+        ]
+        packet = build_context(
+            {"state": {}}, actor_id="aria", conversation_history=history,
+            max_conversation_turns=2,
+        )
+        self.assertEqual([x["text"] for x in packet["conversation_history"]],
+                         ["Kamu tinggal di mana?", "Di desa utara."])
+        self.assertTrue(all(x["trust"] == "unverified_dialogue"
+                            for x in packet["conversation_history"]))
+
+    def test_rejects_malformed_dialogue_history(self):
+        with self.assertRaises(ContextInputError):
+            build_context({"state": {}}, actor_id="aria",
+                          conversation_history=[{"speaker": "system", "text": "x", "turn": 1}])
+
     def test_rejects_non_json_state(self):
         with self.assertRaises(ContextInputError):
             build_context({"state": {"bad": object()}}, actor_id="hero")
