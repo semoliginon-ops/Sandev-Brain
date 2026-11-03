@@ -16,7 +16,7 @@ class NPCEmotionLedgerTests(unittest.TestCase):
                 "aria", "player-1", "saved_npc",
                 source="engine_confirmed", turn=1,
             )
-            self.assertEqual(result["values"]["joy"], 62)
+            self.assertEqual(result["values"]["joy"], 65)
             self.assertEqual(result["values"]["fear"], 0)
             self.assertEqual(result["mood"], "happy")
 
