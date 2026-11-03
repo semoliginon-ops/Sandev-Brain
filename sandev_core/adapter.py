@@ -152,6 +152,8 @@ def decide_from_snapshot(
             "current_minute": routine.get("current_minute"),
             "day_of_week": routine.get("day_of_week"),
             "state": _mapping(routine.get("state", {}), "npc_routine.state"),
+            "world": _mapping(routine.get("world", {}), "npc_routine.world"),
+            "nearby_entity_ids": routine.get("nearby_entity_ids", []),
             "routines": routine.get("routines", []),
         }
         activities = _string_list(routine.get("allowed_activities"), "npc_routine.allowed_activities")
