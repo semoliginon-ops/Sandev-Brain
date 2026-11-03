@@ -111,5 +111,35 @@ class ConversationPipelineTests(unittest.TestCase):
         self.assertEqual(result["follow_up"]["status"], "unresolved")
         self.assertEqual(result["status"], "no_response")
 
+    def test_curated_dialogue_uses_emotional_delivery_cue(self):
+        ctx = context("Halo!")
+        ctx["npc_emotion"] = {
+            "values": {"joy": 50, "fear": 0, "anger": 75,
+                       "sadness": 0, "trust": 20, "suspicion": 0},
+            "mood": "happy",
+        }
+        result = respond_to_context(ctx, PATTERNS)
+        self.assertEqual(result["status"], "response_selected")
+        self.assertEqual(result["response"]["mood"], "angry")
+        self.assertEqual(result["text"],
+                         "*menjawab dengan nada marah* Halo, pilot! Aku siap menemanimu.")
+
+    def test_fact_follow_up_uses_emotional_delivery_cue(self):
+        history = [{"speaker": "npc", "text": "Aku bertemu Aria di desa.", "turn": 1}]
+        catalog = [{"id": "npc_aria", "name": "Aria", "aliases": [], "source": "engine_confirmed"}]
+        facts = [{"id": "aria_family", "entity_id": "npc_aria", "aspect": "family",
+                  "value": "Memiliki adik bernama Lio.", "source": "engine_confirmed"}]
+        ctx = context("Bagaimana dengan keluarganya?", conversation_history=history)
+        ctx["npc_emotion"] = {
+            "values": {"joy": 50, "fear": 0, "anger": 0,
+                       "sadness": 70, "trust": 50, "suspicion": 0},
+            "mood": "calm",
+        }
+        result = respond_to_context(ctx, PATTERNS, reference_catalog=catalog, entity_facts=facts)
+        self.assertEqual(result["status"], "fact_response_selected")
+        self.assertEqual(result["fact_response"]["mood"], "sad")
+        self.assertEqual(result["text"],
+                         "*menunduk sedih* Yang kutahu, Memiliki adik bernama Lio.")
+
 if __name__ == "__main__":
     unittest.main()
