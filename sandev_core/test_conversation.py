@@ -3,7 +3,7 @@ import unittest
 from conversation import ConversationPipelineError, respond_to_context
 
 
-def context(message, *, game_id="plane_shooter", needs=None):
+def context(message, *, game_id="plane_shooter", needs=None, conversation_history=None):
     return {
         "context_version": "1.0",
         "game_id": game_id,
@@ -15,6 +15,7 @@ def context(message, *, game_id="plane_shooter", needs=None):
         "player_message": message,
         "player_message_status": "raw_uninterpreted_input",
         "recent_events": [],
+        "conversation_history": conversation_history or [],
         "memories": [],
         "memory_tags_used": [],
     }
@@ -56,6 +57,22 @@ class ConversationPipelineTests(unittest.TestCase):
         with self.assertRaises(ConversationPipelineError):
             respond_to_context({"player_message": "hai"}, PATTERNS)
 
+
+    def test_follow_up_resolution_is_attached_without_inventing_response(self):
+        history = [{"speaker": "npc", "text": "Aku bertemu Aria di desa.", "turn": 1}]
+        catalog = [{"id": "npc_aria", "name": "Aria", "aliases": [], "source": "engine_confirmed"}]
+        result = respond_to_context(context("Dia siapa?", conversation_history=history), PATTERNS, reference_catalog=catalog)
+        self.assertEqual(result["follow_up"]["status"], "resolved")
+        self.assertEqual(result["follow_up"]["reference_id"], "npc_aria")
+        self.assertEqual(result["status"], "no_response")
+        self.assertIsNone(result["text"])
+
+    def test_follow_up_does_not_resolve_untrusted_catalog_reference(self):
+        history = [{"speaker": "npc", "text": "Raja Bayangan muncul.", "turn": 1}]
+        catalog = [{"id": "npc_shadow", "name": "Raja Bayangan", "aliases": [], "source": "model_guess"}]
+        result = respond_to_context(context("Dia siapa?", conversation_history=history), PATTERNS, reference_catalog=catalog)
+        self.assertEqual(result["follow_up"]["status"], "unresolved")
+        self.assertEqual(result["status"], "no_response")
 
 if __name__ == "__main__":
     unittest.main()
