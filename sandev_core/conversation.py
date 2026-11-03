@@ -12,7 +12,7 @@ from language import LanguageInputError, select_response
 from followup import FollowUpInputError, resolve_follow_up
 from facts import FactLookupError, retrieve_entity_fact
 from response_composer import ResponseComposerError, compose_fact_response
-from personality import PersonalityError, apply_personality_style
+from personality import PersonalityError, apply_personality_style, apply_emotion_style
 
 
 class ConversationPipelineError(ValueError):
@@ -67,6 +67,7 @@ def respond_to_context(
             fact_lookup,
             max_chars=max_chars,
             personality=npc_personality,
+            emotional_state=context.get("npc_emotion"),
         )
     except ResponseComposerError as exc:
         raise ConversationPipelineError(str(exc)) from exc
@@ -120,8 +121,22 @@ def respond_to_context(
                 "fact_lookup": fact_lookup, "fact_response": fact_response,
                 "response": response, "reason": styled_response["reason"],
             }
+        try:
+            emotional_response = apply_emotion_style(
+                styled_response["text"], context.get("npc_emotion"), max_chars=max_chars
+            )
+        except PersonalityError as exc:
+            raise ConversationPipelineError(str(exc)) from exc
+        if emotional_response["status"] != "styled":
+            return {
+                "status": "no_response", "text": None,
+                "interpretation": interpretation, "follow_up": follow_up,
+                "fact_lookup": fact_lookup, "fact_response": fact_response,
+                "response": response, "reason": emotional_response["reason"],
+            }
         response = dict(response)
-        response["text"] = styled_response["text"]
+        response["text"] = emotional_response["text"]
+        response["mood"] = emotional_response["mood"]
 
     if response.get("status") != "no_matching_response":
         return {
