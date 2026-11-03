@@ -85,5 +85,72 @@ class GenericAdapterTests(unittest.TestCase):
         self.assertEqual(result["status"], "intent_only_engine_must_validate")
 
 
+    def test_optional_npc_behavior_uses_same_adapter_contract(self):
+        self.snapshot["npc_behavior"] = {
+            "npc_id": "aria",
+            "player_id": "player-1",
+            "personality": "friendly",
+            "state": {"under_threat": True},
+            "allowed_actions": ["guard_player", "idle"],
+        }
+        result = decide_from_snapshot(self.snapshot)
+        self.assertEqual(result["action"]["type"], "take_cover")
+        self.assertEqual(
+            result["npc_behavior"]["proposal"]["action_id"], "guard_player"
+        )
+        self.assertEqual(
+            result["npc_behavior"]["execution"], "not_performed"
+        )
+        self.assertEqual(
+            result["npc_behavior"]["authority"], "game_engine_required"
+        )
+
+    def test_npc_behavior_is_optional_and_preserves_legacy_output(self):
+        result = decide_from_snapshot(self.snapshot)
+        self.assertNotIn("npc_behavior", result)
+        self.assertEqual(result["action"]["type"], "take_cover")
+
+    def test_npc_behavior_rejects_missing_scope(self):
+        self.snapshot["npc_behavior"] = {
+            "npc_id": "aria",
+            "allowed_actions": ["idle"],
+        }
+        with self.assertRaisesRegex(AdapterInputError, "player_id"):
+            decide_from_snapshot(self.snapshot)
+
+    def test_npc_behavior_rejects_invalid_personality(self):
+        self.snapshot["npc_behavior"] = {
+            "npc_id": "aria",
+            "player_id": "player-1",
+            "personality": "invented",
+            "state": {},
+            "allowed_actions": ["idle"],
+        }
+        with self.assertRaisesRegex(AdapterInputError, "unsupported NPC personality"):
+            decide_from_snapshot(self.snapshot)
+
+    def test_npc_behavior_memory_requires_matching_scope(self):
+        self.snapshot["npc_behavior"] = {
+            "npc_id": "aria",
+            "player_id": "player-1",
+            "state": {},
+            "allowed_actions": ["keep_distance", "idle"],
+            "memories": [{
+                "npc_id": "aria",
+                "player_id": "player-1",
+                "source": "engine_confirmed",
+                "tags": ["betrayal"],
+            }],
+        }
+        result = decide_from_snapshot(self.snapshot)
+        self.assertEqual(
+            result["npc_behavior"]["proposal"]["action_id"], "keep_distance"
+        )
+        self.assertIn(
+            "trusted_memory_betrayal",
+            result["npc_behavior"]["proposal"]["reason_tags"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
