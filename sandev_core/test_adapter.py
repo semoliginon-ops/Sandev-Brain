@@ -135,6 +135,11 @@ class GenericAdapterTests(unittest.TestCase):
             "player_id": "player-1",
             "state": {},
             "allowed_actions": ["keep_distance", "idle"],
+            "goals": [{
+                "tag": "avoid_player", "priority": 100,
+                "source": "engine_confirmed",
+                "npc_id": "aria", "player_id": "player-1",
+            }],
             "memories": [{
                 "npc_id": "aria",
                 "player_id": "player-1",
@@ -148,6 +153,10 @@ class GenericAdapterTests(unittest.TestCase):
         )
         self.assertIn(
             "trusted_memory_betrayal",
+            result["npc_behavior"]["proposal"]["reason_tags"],
+        )
+        self.assertIn(
+            "goal_avoid_player_priority_100",
             result["npc_behavior"]["proposal"]["reason_tags"],
         )
 
