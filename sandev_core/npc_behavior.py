@@ -176,7 +176,7 @@ def propose_behavior(
     if signals["npc_has_task"] or "continue_task" in goal_tags:
         add("continue_task", 30, "active_task")
     if "survive" in goal_tags and signals["under_threat"] and signals["escape_route_available"]:
-        add("flee", 8, "survival_goal")
+        add("flee", 40, "survival_goal")
 
     # Authored personality preferences affect style of behavior, not facts.
     personality_weights = {
