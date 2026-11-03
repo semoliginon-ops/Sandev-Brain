@@ -212,5 +212,34 @@ class GenericAdapterTests(unittest.TestCase):
             decide_from_snapshot(self.snapshot)
 
 
+    def test_optional_npc_social_proposes_trusted_nearby_interaction(self):
+        self.snapshot["npc_social"] = {
+            "npc_id": "aria",
+            "nearby_npc_ids": ["bima"],
+            "personality": "friendly",
+            "state": {"wants_socialize": True},
+            "relationships": [{
+                "npc_a_id": "aria", "npc_b_id": "bima", "score": 70,
+                "source": "engine_confirmed",
+            }],
+            "allowed_actions": ["greet", "converse", "offer_help"],
+        }
+        result = decide_from_snapshot(self.snapshot)
+        self.assertEqual(result["npc_social"]["proposal"]["action_id"], "greet")
+        self.assertEqual(result["npc_social"]["proposal"]["target_npc_id"], "bima")
+        self.assertEqual(result["npc_social"]["execution"], "not_performed")
+        self.assertEqual(result["action"]["type"], "take_cover")
+
+    def test_npc_social_is_optional_and_legacy_shape_is_unchanged(self):
+        result = decide_from_snapshot(self.snapshot)
+        self.assertNotIn("npc_social", result)
+        self.assertNotIn("npc_routine", result)
+
+    def test_npc_social_rejects_missing_actor_scope(self):
+        self.snapshot["npc_social"] = {"allowed_actions": ["greet"]}
+        with self.assertRaisesRegex(AdapterInputError, "npc_id"):
+            decide_from_snapshot(self.snapshot)
+
+
 if __name__ == "__main__":
     unittest.main()
