@@ -23,10 +23,10 @@ def _valid_scalar(value: Any) -> bool:
     return value is None or isinstance(value, (str, bool, int, float))
 
 
-def _matches_conditions(conditions: Mapping[str, Any], state: Mapping[str, Any]) -> bool:
+def _matches_conditions(conditions: Mapping[str, Any], state: Mapping[str, Any], *, label: str = "routine conditions") -> bool:
     for key, expected in conditions.items():
         if not isinstance(key, str) or not key.strip() or not _valid_scalar(expected):
-            raise NPCRoutineError("routine conditions must use non-empty keys and scalar values")
+            raise NPCRoutineError(f"{label} must use non-empty keys and scalar values")
         if key not in state or state[key] != expected:
             return False
     return True
@@ -116,7 +116,7 @@ def propose_routine(context: Mapping[str, Any], *, allowed_activities: list[str]
             continue
         if not _matches_conditions(conditions, state):
             continue
-        if not _matches_conditions(world_conditions, world):
+        if not _matches_conditions(world_conditions, world, label="world_conditions"):
             continue
         if not set(requires_nearby).issubset(nearby_ids) or set(forbids_nearby) & nearby_ids:
             continue
