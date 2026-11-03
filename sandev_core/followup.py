@@ -15,7 +15,26 @@ FOLLOW_UP_CUES = (
     "dia siapa", "siapa dia", "mereka siapa", "orang itu", "yang tadi",
     "ceritakan lebih banyak", "cerita lebih lanjut", "bagaimana dengan",
     "kenapa dia", "mengapa dia", "apa maksudnya", "dia itu",
+    "keluarganya", "tinggal di mana", "di mana dia", "berasal dari mana",
+    "apa pekerjaannya", "siapa keluarganya",
 )
+
+
+def _classify_aspect(message: str) -> str | None:
+    """Return a supported question aspect without inferring its answer."""
+    text = _normalize(message)
+    groups = (
+        ("family", ("keluarga", "ayah", "ibu", "saudara", "adik", "kakak", "anaknya", "istrinya", "suaminya")),
+        ("location", ("tinggal di mana", "di mana dia", "berasal dari mana", "tempat tinggal", "rumahnya", "desanya")),
+        ("motive", ("kenapa", "mengapa", "alasan", "motif", "melakukan itu")),
+        ("identity", ("dia siapa", "siapa dia", "identitas", "asal usul")),
+    )
+    for aspect, terms in groups:
+        if any(term in text for term in terms):
+            return aspect
+    if any(cue in text for cue in FOLLOW_UP_CUES):
+        return "general_details"
+    return None
 
 
 class FollowUpInputError(ValueError):
@@ -46,10 +65,11 @@ def resolve_follow_up(
         raise FollowUpInputError("reference_catalog must be a sequence")
 
     normalized_message = _normalize(message)
-    is_follow_up = any(cue in normalized_message for cue in FOLLOW_UP_CUES)
+    aspect = _classify_aspect(normalized_message)
+    is_follow_up = aspect is not None
     if not is_follow_up:
         return {"status": "not_follow_up", "reference_id": None, "candidates": [],
-                "reason": "no_supported_follow_up_cue"}
+                "aspect": None, "reason": "no_supported_follow_up_cue"}
     
     entries: list[tuple[str, list[str]]] = []
     seen_ids: set[str] = set()
@@ -84,12 +104,12 @@ def resolve_follow_up(
 
     if not latest_by_id:
         return {"status": "unresolved", "reference_id": None, "candidates": [],
-                "reason": "no_trusted_catalog_reference_in_recent_dialogue"}
+                "aspect": aspect, "reason": "no_trusted_catalog_reference_in_recent_dialogue"}
     latest_index = max(latest_by_id.values())
     candidates = sorted(ref_id for ref_id, index in latest_by_id.items() if index == latest_index)
     if len(candidates) != 1:
         return {"status": "ambiguous", "reference_id": None, "candidates": candidates,
-                "reason": "multiple_references_mentioned_in_latest_relevant_turn"}
+                "aspect": aspect, "reason": "multiple_references_mentioned_in_latest_relevant_turn"}
     return {"status": "resolved", "reference_id": candidates[0], "candidates": candidates,
-            "reason": "unique_recent_trusted_catalog_reference",
+            "reason": "unique_recent_trusted_catalog_reference", "aspect": aspect,
             "reference_source": "trusted_catalog"}
