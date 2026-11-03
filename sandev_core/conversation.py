@@ -12,6 +12,7 @@ from language import LanguageInputError, select_response
 from followup import FollowUpInputError, resolve_follow_up
 from facts import FactLookupError, retrieve_entity_fact
 from response_composer import ResponseComposerError, compose_fact_response
+from personality import PersonalityError, apply_personality_style
 
 
 class ConversationPipelineError(ValueError):
@@ -25,6 +26,7 @@ def respond_to_context(
     max_chars: int = 280,
     reference_catalog: Sequence[Mapping[str, Any]] = (),
     entity_facts: Sequence[Mapping[str, Any]] = (),
+    npc_personality: str = "neutral",
 ) -> dict[str, Any]:
     """Interpret the raw message in a context packet and select authored dialogue.
 
@@ -64,6 +66,7 @@ def respond_to_context(
             follow_up.get("aspect"),
             fact_lookup,
             max_chars=max_chars,
+            personality=npc_personality,
         )
     except ResponseComposerError as exc:
         raise ConversationPipelineError(str(exc)) from exc
@@ -102,6 +105,22 @@ def respond_to_context(
         )
     except LanguageInputError as exc:
         raise ConversationPipelineError(str(exc)) from exc
+
+    try:
+        styled_response = apply_personality_style(
+            response.get("text", ""), npc_personality, max_chars=max_chars
+        )
+    except PersonalityError as exc:
+        raise ConversationPipelineError(str(exc)) from exc
+    if styled_response["status"] != "styled":
+        return {
+            "status": "no_response", "text": None,
+            "interpretation": interpretation, "follow_up": follow_up,
+            "fact_lookup": fact_lookup, "fact_response": fact_response,
+            "response": response, "reason": styled_response["reason"],
+        }
+    response = dict(response)
+    response["text"] = styled_response["text"]
 
     if response.get("status") != "no_matching_response":
         return {
