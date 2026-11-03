@@ -52,6 +52,7 @@ def build_context(
     npc_relationship_ledger: Any = None,
     npc_id: str | None = None,
     player_id: str | None = None,
+    npc_memory_current_turn: int | None = None,
     recent_events: Iterable[Mapping[str, Any]] = (),
     max_memories: int = 8,
     max_npc_memories: int = 8,
@@ -136,7 +137,7 @@ def build_context(
         retrieve_npc = getattr(npc_memory_ledger, "retrieve", None)
         if not callable(retrieve_npc):
             raise ContextInputError("npc_memory_ledger must provide retrieve(npc_id, player_id, ...)")
-        for item in retrieve_npc(npc_id, player_id, tags=tags, limit=max_npc_memories):
+        for item in retrieve_npc(npc_id, player_id, tags=tags, limit=max_npc_memories, current_turn=npc_memory_current_turn):
             if not isinstance(item, Mapping) or item.get("source") not in TRUSTED_SOURCES:
                 continue
             if item.get("npc_id") != npc_id or item.get("player_id") != player_id:
