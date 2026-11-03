@@ -25,6 +25,8 @@ This folder contains executable, model-independent game-intelligence components.
 
 The adapter validates candidate shapes, rejects duplicate IDs and non-finite numeric scores, and returns a versioned intent envelope. The game integration must supply current state and legal candidates; the adapter does not connect to a live engine or generate those candidates itself.
 
+An optional `npc_behavior` object can be included in the same snapshot to request a separate NPC behavior proposal. It contains `npc_id`, `player_id`, `allowed_actions`, and optional `personality`, `state`, `goals`, `relationship`, `emotion`, and `memories`. The NPC allow-list is independent of the primary action allow-list. The result is returned under `npc_behavior`; it is advisory only (`execution: not_performed`) and the game engine must validate and execute any action itself. Scoped memories are ignored unless their NPC/player IDs match the supplied pair and their provenance is trusted. Omitting this object preserves the original adapter response.
+
 ## Context packet
 
 `context.py` exposes `build_context(...)`, which assembles a versioned JSON-safe packet with game/actor identifiers, current authoritative state, explicit need urgency, goals, the player's raw message, bounded recent events, and retrieved memories. It preserves the message verbatim within a configurable character limit and marks it as `raw_uninterpreted_input`: context assembly is not language understanding.
