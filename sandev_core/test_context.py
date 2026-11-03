@@ -4,6 +4,7 @@ from pathlib import Path
 
 from context import ContextInputError, build_context
 from memory import MemoryLedger
+from npc_memory import NPCMemoryLedger, RelationshipLedger
 
 
 class ContextPacketTests(unittest.TestCase):
@@ -104,6 +105,35 @@ class ContextPacketTests(unittest.TestCase):
             build_context([], actor_id="hero")
         with self.assertRaises(ContextInputError):
             build_context({"state": {}}, actor_id=" ")
+
+
+    def test_context_includes_only_the_selected_npc_player_memory_and_relationship(self):
+        with tempfile.TemporaryDirectory() as folder:
+            memories = NPCMemoryLedger(Path(folder) / "npc-memory.json")
+            relationships = RelationshipLedger(Path(folder) / "relationships.json")
+            memories.record_event("aria", "player-1", "Player saved Aria",
+                                  source="engine_confirmed", turn=4)
+            memories.record_event("borin", "player-1", "Player helped Borin",
+                                  source="engine_confirmed", turn=5)
+            relationships.apply_event("aria", "player-1", "saved_npc",
+                                       source="engine_confirmed")
+            packet = build_context(
+                {"state": {}}, actor_id="aria",
+                npc_memory_ledger=memories,
+                npc_relationship_ledger=relationships,
+                npc_id="aria", player_id="player-1",
+            )
+            self.assertEqual([item["event"] for item in packet["npc_memories"]],
+                             ["Player saved Aria"])
+            self.assertEqual(packet["npc_relationship"]["score"], 15)
+            self.assertEqual(packet["npc_relationship"]["label"], "neutral")
+
+    def test_scoped_context_requires_both_identity_ids(self):
+        with tempfile.TemporaryDirectory() as folder:
+            memories = NPCMemoryLedger(Path(folder) / "npc-memory.json")
+            with self.assertRaises(ContextInputError):
+                build_context({"state": {}}, actor_id="aria",
+                              npc_memory_ledger=memories, npc_id="aria")
 
 
 if __name__ == "__main__":
