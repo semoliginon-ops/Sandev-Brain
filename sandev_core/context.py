@@ -6,6 +6,7 @@ does not interpret player language, generate dialogue, execute actions, or call 
 from __future__ import annotations
 
 import json
+from collections import deque
 from typing import Any, Iterable, Mapping
 
 TRUSTED_SOURCES = {"engine_confirmed", "player_approved"}
@@ -167,6 +168,7 @@ def build_context(
         # Validate the supplied sequence, then retain the most recent turns.
         # Keeping the oldest prefix silently drops the immediate conversational
         # context, which is especially harmful for follow-up questions.
+        recent_dialogue = deque(maxlen=max_conversation_turns or None)
         for item in conversation_history:
             if not isinstance(item, Mapping):
                 raise ContextInputError("each conversation turn must be an object")
@@ -177,9 +179,10 @@ def build_context(
                 raise ContextInputError("conversation text must be non-empty and within the character limit")
             if isinstance(turn, bool) or not isinstance(turn, int) or turn < 0:
                 raise ContextInputError("conversation turn must be a non-negative integer")
-            dialogue.append({"speaker": speaker, "text": message, "turn": turn,
-                             "trust": "unverified_dialogue"})
-        dialogue = dialogue[-max_conversation_turns:] if max_conversation_turns else []
+            if max_conversation_turns:
+                recent_dialogue.append({"speaker": speaker, "text": message, "turn": turn,
+                                        "trust": "unverified_dialogue"})
+        dialogue = list(recent_dialogue)
     except TypeError as exc:
         raise ContextInputError("conversation_history must be iterable") from exc
 
