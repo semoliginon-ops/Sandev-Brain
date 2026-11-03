@@ -67,6 +67,34 @@ class ConversationPipelineTests(unittest.TestCase):
         self.assertEqual(result["status"], "no_response")
         self.assertIsNone(result["text"])
 
+    def test_follow_up_retrieves_only_trusted_entity_fact(self):
+        history = [{"speaker": "npc", "text": "Aku bertemu Aria di desa.", "turn": 1}]
+        catalog = [{"id": "npc_aria", "name": "Aria", "aliases": [], "source": "engine_confirmed"}]
+        facts = [
+            {"id": "aria_family", "entity_id": "npc_aria", "aspect": "family",
+             "value": "Memiliki adik bernama Lio.", "source": "engine_confirmed"},
+            {"id": "guess", "entity_id": "npc_aria", "aspect": "family",
+             "value": "Putri kerajaan.", "source": "model_guess"},
+        ]
+        result = respond_to_context(
+            context("Bagaimana dengan keluarganya?", conversation_history=history),
+            PATTERNS, reference_catalog=catalog, entity_facts=facts,
+        )
+        self.assertEqual(result["follow_up"]["reference_id"], "npc_aria")
+        self.assertEqual(result["fact_lookup"]["status"], "found")
+        self.assertEqual(result["fact_lookup"]["fact"]["id"], "aria_family")
+        self.assertIsNone(result["text"])
+
+    def test_follow_up_fact_lookup_abstains_for_missing_fact(self):
+        history = [{"speaker": "npc", "text": "Aku bertemu Aria.", "turn": 1}]
+        catalog = [{"id": "npc_aria", "name": "Aria", "aliases": [], "source": "engine_confirmed"}]
+        result = respond_to_context(
+            context("Bagaimana dengan keluarganya?", conversation_history=history),
+            PATTERNS, reference_catalog=catalog,
+        )
+        self.assertEqual(result["fact_lookup"]["status"], "not_found")
+        self.assertIsNone(result["fact_lookup"]["fact"])
+
     def test_follow_up_does_not_resolve_untrusted_catalog_reference(self):
         history = [{"speaker": "npc", "text": "Raja Bayangan muncul.", "turn": 1}]
         catalog = [{"id": "npc_shadow", "name": "Raja Bayangan", "aliases": [], "source": "model_guess"}]
