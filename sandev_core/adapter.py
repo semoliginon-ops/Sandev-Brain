@@ -11,6 +11,7 @@ from typing import Any, Mapping
 
 from brain import ActionCandidate, choose_action, decision_to_dict
 from npc_behavior import NPCBehaviorError, propose_behavior
+from npc_routine import NPCRoutineError, propose_routine
 
 
 class AdapterInputError(ValueError):
@@ -141,5 +142,22 @@ def decide_from_snapshot(
             )
         except NPCBehaviorError as exc:
             raise AdapterInputError(f"npc_behavior: {exc}") from exc
+
+    # Optional NPC daily schedule channel; the host supplies the in-game clock.
+    routine_config = data.get("npc_routine")
+    if routine_config is not None:
+        routine = _mapping(routine_config, "npc_routine")
+        routine_context = {
+            "npc_id": _string(routine.get("npc_id"), "npc_routine.npc_id"),
+            "current_minute": routine.get("current_minute"),
+            "day_of_week": routine.get("day_of_week"),
+            "state": _mapping(routine.get("state", {}), "npc_routine.state"),
+            "routines": routine.get("routines", []),
+        }
+        activities = _string_list(routine.get("allowed_activities"), "npc_routine.allowed_activities")
+        try:
+            result["npc_routine"] = propose_routine(routine_context, allowed_activities=activities)
+        except NPCRoutineError as exc:
+            raise AdapterInputError(f"npc_routine: {exc}") from exc
 
     return result
