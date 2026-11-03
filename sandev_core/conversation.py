@@ -106,21 +106,22 @@ def respond_to_context(
     except LanguageInputError as exc:
         raise ConversationPipelineError(str(exc)) from exc
 
-    try:
-        styled_response = apply_personality_style(
-            response.get("text", ""), npc_personality, max_chars=max_chars
-        )
-    except PersonalityError as exc:
-        raise ConversationPipelineError(str(exc)) from exc
-    if styled_response["status"] != "styled":
-        return {
-            "status": "no_response", "text": None,
-            "interpretation": interpretation, "follow_up": follow_up,
-            "fact_lookup": fact_lookup, "fact_response": fact_response,
-            "response": response, "reason": styled_response["reason"],
-        }
-    response = dict(response)
-    response["text"] = styled_response["text"]
+    if response.get("status") != "no_matching_response":
+        try:
+            styled_response = apply_personality_style(
+                response.get("text", ""), npc_personality, max_chars=max_chars
+            )
+        except PersonalityError as exc:
+            raise ConversationPipelineError(str(exc)) from exc
+        if styled_response["status"] != "styled":
+            return {
+                "status": "no_response", "text": None,
+                "interpretation": interpretation, "follow_up": follow_up,
+                "fact_lookup": fact_lookup, "fact_response": fact_response,
+                "response": response, "reason": styled_response["reason"],
+            }
+        response = dict(response)
+        response["text"] = styled_response["text"]
 
     if response.get("status") != "no_matching_response":
         return {
