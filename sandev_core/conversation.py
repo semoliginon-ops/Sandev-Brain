@@ -11,6 +11,7 @@ from intent import IntentInputError, classify_intent
 from language import LanguageInputError, select_response
 from followup import FollowUpInputError, resolve_follow_up
 from facts import FactLookupError, retrieve_entity_fact
+from response_composer import ResponseComposerError, compose_fact_response
 
 
 class ConversationPipelineError(ValueError):
@@ -58,17 +59,39 @@ def respond_to_context(
         raise ConversationPipelineError(str(exc)) from exc
 
     try:
+        fact_response = compose_fact_response(
+            follow_up.get("reference_id"),
+            follow_up.get("aspect"),
+            fact_lookup,
+            max_chars=max_chars,
+        )
+    except ResponseComposerError as exc:
+        raise ConversationPipelineError(str(exc)) from exc
+
+    try:
         interpretation = classify_intent(message, context={"game_id": context.get("game_id", "unspecified")})
     except IntentInputError as exc:
         raise ConversationPipelineError(str(exc)) from exc
 
     if interpretation["status"] != "matched":
+        if fact_response["status"] == "composed":
+            return {
+                "status": "fact_response_selected",
+                "text": fact_response["text"],
+                "interpretation": interpretation,
+                "follow_up": follow_up,
+                "fact_lookup": fact_lookup,
+                "fact_response": fact_response,
+                "response": None,
+                "reason": "trusted_fact_composed_for_follow_up",
+            }
         return {
             "status": "no_response",
             "text": None,
             "interpretation": interpretation,
             "follow_up": follow_up,
             "fact_lookup": fact_lookup,
+            "fact_response": fact_response,
             "response": None,
             "reason": "intent_not_confidently_matched",
         }
@@ -87,14 +110,28 @@ def respond_to_context(
             "interpretation": interpretation,
             "follow_up": follow_up,
             "fact_lookup": fact_lookup,
+            "fact_response": fact_response,
             "response": response,
             "reason": "matched_intent_and_curated_response",
+        }
+    if fact_response["status"] == "composed":
+        return {
+            "status": "fact_response_selected",
+            "text": fact_response["text"],
+            "interpretation": interpretation,
+            "follow_up": follow_up,
+            "fact_lookup": fact_lookup,
+            "fact_response": fact_response,
+            "response": response,
+            "reason": "trusted_fact_composed_after_no_curated_match",
         }
     return {
         "status": "no_response",
         "text": None,
         "interpretation": interpretation,
         "follow_up": follow_up,
+        "fact_lookup": fact_lookup,
+        "fact_response": fact_response,
         "response": response,
         "reason": "no_curated_response_for_intent_and_context",
     }
