@@ -46,7 +46,7 @@ def propose_social_interaction(
     if not isinstance(context, Mapping):
         raise NPCSocialError("context must be an object")
     actor_id = _identity(context.get("npc_id"), "npc_id")
-    if personality not in PERSONALITIES:
+    if not isinstance(personality, str) or personality not in PERSONALITIES:
         raise NPCSocialError("unsupported NPC personality")
     if not isinstance(allowed_actions, (list, tuple)) or isinstance(allowed_actions, (str, bytes)):
         raise NPCSocialError("allowed_actions must be a list or tuple")
