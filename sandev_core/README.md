@@ -31,6 +31,8 @@ An optional `npc_behavior` object can be included in the same snapshot to reques
 
 `context.py` exposes `build_context(...)`, which assembles a versioned JSON-safe packet with game/actor identifiers, current authoritative state, explicit need urgency, goals, the player's raw message, bounded recent events, and retrieved memories. It preserves the message verbatim within a configurable character limit and marks it as `raw_uninterpreted_input`: context assembly is not language understanding.
 
+When `max_conversation_turns` is set, the context builder retains the newest turns (not the oldest prefix) using a bounded rolling buffer. This protects immediate follow-up context while preserving the `unverified_dialogue` trust label; recent dialogue is never promoted into verified world facts.
+
 Recent events and retrieved memories are included only when their provenance is `engine_confirmed` or `player_approved`. The packet and state have configurable size limits. It does not infer current state from old memory, or generate dialogue, or call a model.
 
 ## Indonesian intent and contextual response baseline
