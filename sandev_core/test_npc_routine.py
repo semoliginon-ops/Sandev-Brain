@@ -63,6 +63,31 @@ class NPCRoutineTests(unittest.TestCase):
         with self.assertRaisesRegex(NPCRoutineError, "conditions"):
             propose_routine(self.context(routines=[entry("bad", conditions={"rain": []})]), allowed_activities=["bad"])
 
+    def test_world_conditions_react_to_weather_and_location(self):
+        routine = entry("shelter", world_conditions={"weather": "rain", "location": "market"})
+        result = propose_routine(self.context(routines=[routine], world={"weather": "rain", "location": "market"}), allowed_activities=["shelter"])
+        self.assertEqual(result["proposal"]["activity_id"], "shelter")
+        mismatch = propose_routine(self.context(routines=[routine], world={"weather": "clear", "location": "market"}), allowed_activities=["shelter"])
+        self.assertEqual(mismatch["status"], "abstained")
+
+    def test_nearby_entities_can_enable_or_block_routine(self):
+        routine = entry("trade", requires_nearby=["merchant-1"])
+        result = propose_routine(self.context(routines=[routine], nearby_entity_ids=["merchant-1"]), allowed_activities=["trade"])
+        self.assertEqual(result["proposal"]["activity_id"], "trade")
+        blocked = propose_routine(self.context(routines=[entry("hide", forbids_nearby=["guard-1"])], nearby_entity_ids=["guard-1"]), allowed_activities=["hide"])
+        self.assertEqual(blocked["status"], "abstained")
+
+    def test_world_and_nearby_facts_are_not_inferred(self):
+        routine = entry("trade", world_conditions={"weather": "clear"}, requires_nearby=["merchant-1"])
+        result = propose_routine(self.context(routines=[routine], world={}, nearby_entity_ids=[]), allowed_activities=["trade"])
+        self.assertEqual(result["status"], "abstained")
+
+    def test_invalid_world_conditions_and_nearby_ids_rejected(self):
+        with self.assertRaisesRegex(NPCRoutineError, "world_conditions"):
+            propose_routine(self.context(routines=[entry("bad", world_conditions={"weather": []})]), allowed_activities=["bad"])
+        with self.assertRaisesRegex(NPCRoutineError, "nearby_entity_ids"):
+            propose_routine(self.context(nearby_entity_ids=[""]), allowed_activities=["work"])
+
     def test_invalid_context_rejected(self):
         with self.assertRaisesRegex(NPCRoutineError, "current_minute"):
             propose_routine(self.context(current_minute=1440), allowed_activities=["work"])
