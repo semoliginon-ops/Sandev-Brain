@@ -10,6 +10,7 @@ import math
 from typing import Any, Mapping
 
 from brain import ActionCandidate, choose_action, decision_to_dict
+from npc_behavior import NPCBehaviorError, propose_behavior
 
 
 class AdapterInputError(ValueError):
@@ -110,4 +111,33 @@ def decide_from_snapshot(
     if "state_version" in data:
         result["state_version"] = data["state_version"]
     result["status"] = "intent_only_engine_must_validate"
+
+    # Optional NPC decision channel shares the generic adapter envelope while
+    # keeping NPC behavior proposals separate from the game's primary action.
+    npc_config = data.get("npc_behavior")
+    if npc_config is not None:
+        npc = _mapping(npc_config, "npc_behavior")
+        npc_id = _string(npc.get("npc_id"), "npc_behavior.npc_id")
+        _string(npc.get("player_id"), "npc_behavior.player_id")
+        npc_allowed = _string_list(
+            npc.get("allowed_actions"), "npc_behavior.allowed_actions"
+        )
+        npc_state = _mapping(npc.get("state", {}), "npc_behavior.state")
+        npc_context = {
+            "actor_id": npc_id,
+            "state": npc_state,
+            "goals": npc.get("goals", []),
+            "npc_relationship": npc.get("relationship"),
+            "npc_emotion": npc.get("emotion"),
+            "npc_memories": npc.get("memories", []),
+        }
+        try:
+            result["npc_behavior"] = propose_behavior(
+                npc_context,
+                personality=npc.get("personality", "neutral"),
+                allowed_actions=npc_allowed,
+            )
+        except NPCBehaviorError as exc:
+            raise AdapterInputError(f"npc_behavior: {exc}") from exc
+
     return result
