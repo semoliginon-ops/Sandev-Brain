@@ -48,8 +48,13 @@ def build_context(
     player_message: str = "",
     memory_ledger: Any = None,
     memory_tags: Iterable[str] = (),
+    npc_memory_ledger: Any = None,
+    npc_relationship_ledger: Any = None,
+    npc_id: str | None = None,
+    player_id: str | None = None,
     recent_events: Iterable[Mapping[str, Any]] = (),
     max_memories: int = 8,
+    max_npc_memories: int = 8,
     max_recent_events: int = 8,
     conversation_history: Iterable[Mapping[str, Any]] = (),
     max_conversation_turns: int = DEFAULT_MAX_CONVERSATION_TURNS,
@@ -72,7 +77,7 @@ def build_context(
         raise ContextInputError("player_message must be a string")
     if max_message_chars < 0 or len(player_message) > max_message_chars:
         raise ContextInputError("player_message exceeds the configured character limit")
-    for name, value in (("max_memories", max_memories), ("max_recent_events", max_recent_events),
+    for name, value in (("max_memories", max_memories), ("max_npc_memories", max_npc_memories), ("max_recent_events", max_recent_events),
                         ("max_conversation_turns", max_conversation_turns),
                         ("max_state_bytes", max_state_bytes), ("max_context_bytes", max_context_bytes)):
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
