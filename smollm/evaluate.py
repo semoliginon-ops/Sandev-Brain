@@ -14,7 +14,7 @@ from typing import Any, Iterable, Mapping
 
 from sandev_brain import _extract_json, validate_response
 
-_ACTIONS_RE = re.compile(r"aksi\\s+valid\\s*:\\s*([A-Za-z0-9_, -]+)", re.IGNORECASE)
+_ACTIONS_RE = re.compile(r"aksi\s+valid\s*:\s*([A-Za-z0-9_, -]+)", re.IGNORECASE)
 
 
 class EvaluationError(ValueError):
@@ -176,7 +176,7 @@ def evaluate_model(*, data_path: str, model_id: str, adapter_path: str | None,
     )
     with (destination / "cases.jsonl").open("w", encoding="utf-8") as handle:
         for row in results:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\\n")
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
     return summary
 
 
