@@ -128,6 +128,12 @@ class NPCSocialTests(unittest.TestCase):
         with self.assertRaisesRegex(NPCSocialError, "score"):
             propose_social_interaction(context, allowed_actions=["greet"])
 
+    def test_non_string_personality_is_rejected(self):
+        with self.assertRaisesRegex(NPCSocialError, "personality"):
+            propose_social_interaction(
+                {"npc_id": "aria"}, personality=[], allowed_actions=["greet"]
+            )
+
     def test_actor_cannot_be_listed_as_nearby(self):
         with self.assertRaisesRegex(NPCSocialError, "cannot appear"):
             propose_social_interaction(
