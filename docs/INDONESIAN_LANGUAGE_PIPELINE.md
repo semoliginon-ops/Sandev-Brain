@@ -51,6 +51,22 @@ The current interpreter is deterministic and narrow. It does not reliably solve 
 5. Regression and untouched evaluation sets are reported separately.
 
 
+## Validated semantic-frame contract
+
+`semantic_frame.py` now accepts either the legacy matched-intent shape or the
+versioned `interpret_message` envelope. For the versioned form it validates
+speech act, temporal scope, negation state, target-grounding state, confidence,
+clarification status, game identifier, and the non-executable trust boundary.
+Only a clear, non-negated, non-question, non-command conversational interpretation
+can become a dialogue frame. The resulting frame preserves the original intent,
+source speech act, temporal scope, negation, target-grounding status, confidence,
+and game identifier for downstream components.
+
+This is a semantic interface improvement, not a new language parser or a
+generalization breakthrough. It does not infer meaning from raw text, and the
+legacy input remains supported for compatibility. Uncertain interpretations
+abstain; semantic frames can never authorize game execution.
+
 ## Recent-turn context retention
 
 The context builder now keeps the **most recent** dialogue turns when applying `max_conversation_turns`, rather than retaining the oldest prefix. This preserves the immediate conversational context needed for short follow-ups such as “yang tadi?”, “kenapa begitu?”, and corrections. The rolling buffer is bounded while input is processed, and a zero-turn budget retains no dialogue. Dialogue remains marked `unverified_dialogue`; recency does not promote a spoken claim into a trusted world fact. This is a context-window correctness improvement, not a language-understanding or generation breakthrough.
