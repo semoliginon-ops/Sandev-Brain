@@ -83,7 +83,9 @@ class ConversationPipelineTests(unittest.TestCase):
         self.assertEqual(result["follow_up"]["reference_id"], "npc_aria")
         self.assertEqual(result["fact_lookup"]["status"], "found")
         self.assertEqual(result["fact_lookup"]["fact"]["id"], "aria_family")
-        self.assertIsNone(result["text"])
+        self.assertEqual(result["status"], "fact_response_selected")
+        self.assertEqual(result["text"], "Yang kutahu, Memiliki adik bernama Lio.")
+        self.assertEqual(result["fact_response"]["status"], "composed")
 
     def test_follow_up_fact_lookup_abstains_for_missing_fact(self):
         history = [{"speaker": "npc", "text": "Aku bertemu Aria.", "turn": 1}]
@@ -94,6 +96,8 @@ class ConversationPipelineTests(unittest.TestCase):
         )
         self.assertEqual(result["fact_lookup"]["status"], "not_found")
         self.assertIsNone(result["fact_lookup"]["fact"])
+        self.assertEqual(result["fact_response"]["status"], "abstained")
+        self.assertIsNone(result["text"])
 
     def test_follow_up_does_not_resolve_untrusted_catalog_reference(self):
         history = [{"speaker": "npc", "text": "Raja Bayangan muncul.", "turn": 1}]
