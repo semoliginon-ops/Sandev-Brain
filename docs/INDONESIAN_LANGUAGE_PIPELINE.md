@@ -51,6 +51,16 @@ The current interpreter is deterministic and narrow. It does not reliably solve 
 5. Regression and untouched evaluation sets are reported separately.
 
 
+## Frozen intent holdout v3 evaluation
+
+The v3 holdout was authored after development-set changes and is evaluated by
+`intent_holdout_v3_eval.py` only after the current implementation is frozen
+and CI is green. The first CI report is its blind baseline. Once that report is
+inspected, v3 becomes diagnostic and must not be used for tuning; a new untouched
+holdout is required for any later generalization claim. Its score is a small
+manual diagnostic, not a statistically representative measure of broad language
+understanding.
+
 ## Validated semantic-frame contract
 
 `semantic_frame.py` now accepts either the legacy matched-intent shape or the
