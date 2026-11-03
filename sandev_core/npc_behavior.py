@@ -88,7 +88,7 @@ def propose_behavior(
     """
     if not isinstance(context, Mapping):
         raise NPCBehaviorError("context must be an object")
-    if personality not in PERSONALITIES:
+    if not isinstance(personality, str) or personality not in PERSONALITIES:
         raise NPCBehaviorError("unsupported NPC personality")
     if not isinstance(allowed_actions, (list, tuple)) or isinstance(allowed_actions, (str, bytes)):
         raise NPCBehaviorError("allowed_actions must be a list or tuple")
@@ -113,11 +113,18 @@ def propose_behavior(
     npc_id = player_id = None
     if relationship is not None:
         npc_id, player_id = relationship.get("npc_id"), relationship.get("player_id")
+        if not isinstance(npc_id, str) or not npc_id.strip() or not isinstance(player_id, str) or not player_id.strip():
+            raise NPCBehaviorError("relationship must include NPC and player scope IDs")
     if emotion is not None:
         emotion_npc, emotion_player = emotion.get("npc_id"), emotion.get("player_id")
+        if not isinstance(emotion_npc, str) or not emotion_npc.strip() or not isinstance(emotion_player, str) or not emotion_player.strip():
+            raise NPCBehaviorError("emotion must include NPC and player scope IDs")
         if npc_id is not None and (npc_id, player_id) != (emotion_npc, emotion_player):
             raise NPCBehaviorError("relationship and emotion scopes do not match")
         npc_id, player_id = emotion_npc, emotion_player
+    actor_id = context.get("actor_id")
+    if npc_id is not None and actor_id is not None and actor_id != npc_id:
+        raise NPCBehaviorError("context actor_id does not match the NPC scope")
     if (npc_id is None) != (player_id is None):
         raise NPCBehaviorError("NPC context scope is incomplete")
     if npc_id is not None and (
@@ -133,7 +140,8 @@ def propose_behavior(
     for item in memories:
         if not isinstance(item, Mapping) or item.get("source") not in TRUSTED_SOURCES:
             continue
-        if npc_id is not None and not _scope_matches(item, npc_id, player_id):
+        # Without an explicit pair scope, memory must not affect behavior.
+        if npc_id is None or not _scope_matches(item, npc_id, player_id):
             continue
         tags = item.get("tags", [])
         if isinstance(tags, (list, tuple)):
@@ -184,7 +192,7 @@ def propose_behavior(
 
     # Emotion is used as a bounded signal; it never overrides hard game facts.
     emotion_weights = {
-        "afraid": {"flee": 28, "keep_distance": 18, "guard_player": -8},
+        "afraid": {"flee": 32, "keep_distance": 18, "guard_player": -8},
         "angry": {"keep_distance": 18, "de_escalate": 16},
         "sad": {"keep_distance": 5},
         "suspicious": {"keep_distance": 18, "de_escalate": 8},
