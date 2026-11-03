@@ -23,7 +23,7 @@ BASELINE = {
 # emotional change over multiple events rather than one arbitrary jump.
 EMOTION_DELTAS = {
     "helped_npc": {"joy": 8, "fear": -3, "trust": 8, "suspicion": -4},
-    "saved_npc": {"joy": 12, "fear": -12, "trust": 12, "suspicion": -8},
+    "saved_npc": {"joy": 15, "fear": -12, "trust": 12, "suspicion": -8},
     "gift_given": {"joy": 6, "trust": 3, "suspicion": -2},
     "kept_promise": {"joy": 5, "trust": 10, "suspicion": -8},
     "kind_dialogue": {"joy": 3, "trust": 2, "anger": -2},
