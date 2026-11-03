@@ -9,6 +9,7 @@ from typing import Any, Mapping, Sequence
 
 from intent import IntentInputError, classify_intent
 from language import LanguageInputError, select_response
+from followup import FollowUpInputError, resolve_follow_up
 
 
 class ConversationPipelineError(ValueError):
@@ -20,6 +21,7 @@ def respond_to_context(
     response_patterns: Sequence[Mapping[str, Any]],
     *,
     max_chars: int = 280,
+    reference_catalog: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Interpret the raw message in a context packet and select authored dialogue.
 
@@ -38,6 +40,15 @@ def respond_to_context(
         raise ConversationPipelineError("context.player_message must be a string")
 
     try:
+        follow_up = resolve_follow_up(
+            message,
+            context.get("conversation_history", []),
+            reference_catalog,
+        )
+    except FollowUpInputError as exc:
+        raise ConversationPipelineError(str(exc)) from exc
+
+    try:
         interpretation = classify_intent(message, context={"game_id": context.get("game_id", "unspecified")})
     except IntentInputError as exc:
         raise ConversationPipelineError(str(exc)) from exc
@@ -47,6 +58,7 @@ def respond_to_context(
             "status": "no_response",
             "text": None,
             "interpretation": interpretation,
+            "follow_up": follow_up,
             "response": None,
             "reason": "intent_not_confidently_matched",
         }
@@ -63,6 +75,7 @@ def respond_to_context(
             "status": "response_selected",
             "text": response["text"],
             "interpretation": interpretation,
+            "follow_up": follow_up,
             "response": response,
             "reason": "matched_intent_and_curated_response",
         }
@@ -70,6 +83,7 @@ def respond_to_context(
         "status": "no_response",
         "text": None,
         "interpretation": interpretation,
+        "follow_up": follow_up,
         "response": response,
         "reason": "no_curated_response_for_intent_and_context",
     }
