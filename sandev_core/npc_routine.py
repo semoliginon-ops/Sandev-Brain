@@ -36,9 +36,11 @@ def propose_routine(context: Mapping[str, Any], *, allowed_activities: list[str]
     """Select one currently eligible, trusted schedule entry.
 
     Required context: npc_id, current_minute (0..1439), day_of_week (0..6),
-    state (flat authoritative facts), and routines. Each trusted routine has
+    state (flat authoritative facts), optional world facts and nearby entity IDs,
+    and routines. Each trusted routine has
     activity_id, start_minute, end_minute, source, npc_id; optional days,
-    priority (0..100), active, and conditions. Windows are start-inclusive,
+    priority (0..100), active, state/world conditions, and nearby entity ID
+    requirements/exclusions. Windows are start-inclusive,
     end-exclusive and must not cross midnight (split overnight routines).
     """
     if not isinstance(context, Mapping):
@@ -59,6 +61,13 @@ def propose_routine(context: Mapping[str, Any], *, allowed_activities: list[str]
         raise NPCRoutineError("allowed_activities must be a list or tuple")
     if any(not isinstance(x, str) or not x.strip() for x in allowed_activities):
         raise NPCRoutineError("allowed_activities must contain non-empty activity IDs")
+    world = context.get("world", {})
+    if not isinstance(world, Mapping):
+        raise NPCRoutineError("world must be an object of authoritative facts")
+    nearby = context.get("nearby_entity_ids", [])
+    if not isinstance(nearby, (list, tuple)) or any(not isinstance(x, str) or not x.strip() for x in nearby):
+        raise NPCRoutineError("nearby_entity_ids must contain non-empty entity IDs")
+    nearby_ids = set(nearby)
     routines = context.get("routines", [])
     if not isinstance(routines, list):
         raise NPCRoutineError("routines must be a list")
@@ -91,11 +100,25 @@ def propose_routine(context: Mapping[str, Any], *, allowed_activities: list[str]
         conditions = routine.get("conditions", {})
         if not isinstance(conditions, Mapping) or len(conditions) > MAX_CONDITIONS:
             raise NPCRoutineError(f"routines[{index}].conditions must be an object of at most {MAX_CONDITIONS} entries")
+        world_conditions = routine.get("world_conditions", {})
+        if not isinstance(world_conditions, Mapping) or len(world_conditions) > MAX_CONDITIONS:
+            raise NPCRoutineError(f"routines[{index}].world_conditions must be an object of at most {MAX_CONDITIONS} entries")
+        requires_nearby = routine.get("requires_nearby", [])
+        forbids_nearby = routine.get("forbids_nearby", [])
+        for field, ids in (("requires_nearby", requires_nearby), ("forbids_nearby", forbids_nearby)):
+            if not isinstance(ids, (list, tuple)) or any(not isinstance(x, str) or not x.strip() for x in ids):
+                raise NPCRoutineError(f"routines[{index}].{field} must contain non-empty entity IDs")
+        if set(requires_nearby) & set(forbids_nearby):
+            raise NPCRoutineError(f"routines[{index}] cannot both require and forbid the same nearby entity")
         if not active or activity not in allowed_activities or day not in days:
             continue
         if not start <= minute < end:
             continue
         if not _matches_conditions(conditions, state):
+            continue
+        if not _matches_conditions(world_conditions, world):
+            continue
+        if not set(requires_nearby).issubset(nearby_ids) or set(forbids_nearby) & nearby_ids:
             continue
         eligible.append((priority, -(end - start), activity, start, end))
 
