@@ -121,6 +121,28 @@ def build_context(
                 continue
             memories.append(_json_copy(dict(item), "memory item"))
 
+    npc_memories: list[dict[str, Any]] = []
+    relationship = None
+    scoped_requested = npc_memory_ledger is not None or npc_relationship_ledger is not None
+    if scoped_requested:
+        if not isinstance(npc_id, str) or not npc_id.strip() or not isinstance(player_id, str) or not player_id.strip():
+            raise ContextInputError("npc_id and player_id are required for NPC-scoped context")
+    if npc_memory_ledger is not None:
+        retrieve_npc = getattr(npc_memory_ledger, "retrieve", None)
+        if not callable(retrieve_npc):
+            raise ContextInputError("npc_memory_ledger must provide retrieve(npc_id, player_id, ...)")
+        for item in retrieve_npc(npc_id, player_id, tags=tags, limit=max_npc_memories):
+            if not isinstance(item, Mapping) or item.get("source") not in TRUSTED_SOURCES:
+                continue
+            if item.get("npc_id") != npc_id or item.get("player_id") != player_id:
+                continue
+            npc_memories.append(_json_copy(dict(item), "NPC memory item"))
+    if npc_relationship_ledger is not None:
+        snapshot_relationship = getattr(npc_relationship_ledger, "snapshot", None)
+        if not callable(snapshot_relationship):
+            raise ContextInputError("npc_relationship_ledger must provide snapshot(npc_id, player_id)")
+        relationship = _json_copy(snapshot_relationship(npc_id, player_id), "NPC relationship")
+
     dialogue: list[dict[str, Any]] = []
     if isinstance(conversation_history, (str, bytes)):
         raise ContextInputError("conversation_history must be an iterable of dialogue objects")
@@ -155,6 +177,8 @@ def build_context(
         "recent_events": events,
         "conversation_history": dialogue,
         "memories": memories,
+        "npc_memories": npc_memories,
+        "npc_relationship": relationship,
         "memory_tags_used": tags,
     }
     packet = _json_copy(packet, "context packet")
