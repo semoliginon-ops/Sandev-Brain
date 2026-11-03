@@ -125,6 +125,8 @@ def decide_from_snapshot(
         npc_state = _mapping(npc.get("state", {}), "npc_behavior.state")
         npc_context = {
             "actor_id": npc_id,
+            "npc_id": npc_id,
+            "player_id": player_id,
             "state": npc_state,
             "goals": npc.get("goals", []),
             "npc_relationship": npc.get("relationship"),
