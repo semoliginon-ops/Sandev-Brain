@@ -120,10 +120,13 @@ class CompanionRuntimeTests(unittest.TestCase):
             self.companion.respond(self.snapshot, "Halo!", patterns)
 
     def test_composed_response_uses_validated_intent_and_profile(self):
-        self.companion.record_confirmed_interaction(
-            "Player helped Aria", source="engine_confirmed", turn=1,
-            relationship_delta=30,
-        )
+        # Each confirmed event is bounded to +/-5; six separate events
+        # legitimately accumulate enough trust to unlock the "close" tier.
+        for turn in range(1, 7):
+            self.companion.record_confirmed_interaction(
+                "Player helped Aria", source="engine_confirmed", turn=turn,
+                relationship_delta=5,
+            )
         result = self.companion.respond_composed(
             self.snapshot, "Halo!", turn=2,
         )
