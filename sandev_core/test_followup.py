@@ -18,6 +18,33 @@ class FollowUpResolutionTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "resolved")
         self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["aspect"], "identity")
+
+    def test_classifies_family_question_without_inventing_answer(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarganya?",
+            [{"text": "Aku bertemu Aria di desa."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["aspect"], "family")
+
+    def test_classifies_location_question(self):
+        result = resolve_follow_up(
+            "Dia tinggal di mana?",
+            [{"text": "Aria berasal dari utara."}],
+            CATALOG,
+        )
+        self.assertEqual(result["aspect"], "location")
+
+    def test_classifies_motive_question(self):
+        result = resolve_follow_up(
+            "Kenapa dia melakukan itu?",
+            [{"text": "Aria datang."}],
+            CATALOG,
+        )
+        self.assertEqual(result["aspect"], "motive")
 
     def test_prefers_most_recent_reference_mention(self):
         result = resolve_follow_up(
