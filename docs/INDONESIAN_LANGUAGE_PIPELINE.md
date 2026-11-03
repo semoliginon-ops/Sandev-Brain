@@ -49,3 +49,8 @@ The current interpreter is deterministic and narrow. It does not reliably solve 
 3. Entity references are resolved only from current host-provided entities and explicit context.
 4. Language interpretation cannot execute an action or claim an outcome.
 5. Regression and untouched evaluation sets are reported separately.
+
+
+## Recent-turn context retention
+
+The context builder now keeps the **most recent** dialogue turns when applying `max_conversation_turns`, rather than retaining the oldest prefix. This preserves the immediate conversational context needed for short follow-ups such as “yang tadi?”, “kenapa begitu?”, and corrections. The rolling buffer is bounded while input is processed, and a zero-turn budget retains no dialogue. Dialogue remains marked `unverified_dialogue`; recency does not promote a spoken claim into a trusted world fact. This is a context-window correctness improvement, not a language-understanding or generation breakthrough.
