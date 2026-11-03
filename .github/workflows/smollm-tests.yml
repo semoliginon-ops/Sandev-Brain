@@ -28,3 +28,5 @@ jobs:
         run: PYTHONPATH=sandev_core python -m intent_holdout_v2
       - name: Report older Indonesian intent diagnostic (not a pristine holdout)
         run: PYTHONPATH=sandev_core python -m heldout_intent_eval
+      - name: First report of frozen Indonesian intent holdout v3 (now diagnostic; do not tune)
+        run: PYTHONPATH=sandev_core python -m intent_holdout_v3_eval
