@@ -21,6 +21,22 @@ ACTION_CATALOG = {
 PERSONALITIES = {"neutral", "friendly", "shy", "cold", "humorous", "angry"}
 TRUSTED_SOURCES = {"engine_confirmed", "player_approved"}
 EMOTION_KEYS = {"joy", "fear", "anger", "sadness", "trust", "suspicion"}
+# Goals are authored by the host game, provenance-checked, and scoped to one NPC/player pair.
+# Values are bounded motivation points at priority=100; goals never add actions to the allow-list.
+GOAL_ACTION_WEIGHTS = {
+    "survive": {"flee": 55},
+    "seek_shelter": {"flee": 45, "keep_distance": 15},
+    "protect_player": {"guard_player": 50},
+    "protect_territory": {"guard_player": 45, "keep_distance": 10},
+    "help_player": {"offer_help": 50},
+    "continue_task": {"continue_task": 40},
+    "complete_quest": {"continue_task": 45},
+    "earn_money": {"continue_task": 25},
+    "find_family": {"request_help": 35, "approach_player": 10},
+    "seek_revenge": {"keep_distance": 20, "de_escalate": 15},
+    "socialize": {"approach_player": 35},
+    "avoid_player": {"keep_distance": 40},
+}
 MEMORY_CUES = {
     "betrayal": {"keep_distance": 12, "de_escalate": 5, "flee": 5},
     "broken_promise": {"keep_distance": 8, "de_escalate": 4},
@@ -160,10 +176,26 @@ def propose_behavior(
     goals = context.get("goals", [])
     if not isinstance(goals, list):
         raise NPCBehaviorError("goals must be a list")
-    goal_tags: set[str] = set()
+    # A goal affects motivation only when its provenance and exact scope are trusted.
+    # Priority is an integer 0..100 so callers cannot smuggle unbounded score values.
+    goal_priorities: dict[str, int] = {}
     for goal in goals:
-        if isinstance(goal, Mapping) and isinstance(goal.get("tag"), str):
-            goal_tags.add(goal["tag"])
+        if not isinstance(goal, Mapping) or goal.get("source") not in TRUSTED_SOURCES:
+            continue
+        if npc_id is None or not _scope_matches(goal, npc_id, player_id):
+            continue
+        tag = goal.get("tag")
+        priority = goal.get("priority", 50)
+        active = goal.get("active", True)
+        if not isinstance(tag, str) or tag not in GOAL_ACTION_WEIGHTS:
+            continue
+        if isinstance(priority, bool) or not isinstance(priority, int) or not 0 <= priority <= 100:
+            raise NPCBehaviorError("trusted goal priority must be an integer from 0 to 100")
+        if not isinstance(active, bool):
+            raise NPCBehaviorError("trusted goal active must be a boolean")
+        if active:
+            goal_priorities[tag] = max(goal_priorities.get(tag, 0), priority)
+    goal_tags = set(goal_priorities)
 
     mood = _mood(emotion)
     relation_score = _relationship_score(relationship)
@@ -183,10 +215,13 @@ def propose_behavior(
     if signals["player_needs_help"] or signals["player_is_injured"]:
         add("offer_help", 35, "player_needs_help")
         add("guard_player", 12, "player_needs_help")
-    if signals["npc_has_task"] or "continue_task" in goal_tags:
+    if signals["npc_has_task"]:
         add("continue_task", 30, "active_task")
-    if "survive" in goal_tags and signals["under_threat"] and signals["escape_route_available"]:
-        add("flee", 40, "survival_goal")
+    for tag, priority in goal_priorities.items():
+        for action, maximum_points in GOAL_ACTION_WEIGHTS[tag].items():
+            points = round(maximum_points * priority / 100)
+            if points:
+                add(action, points, f"goal_{tag}_priority_{priority}")
 
     # Authored personality preferences affect style of behavior, not facts.
     personality_weights = {
