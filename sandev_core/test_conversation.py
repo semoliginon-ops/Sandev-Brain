@@ -37,6 +37,11 @@ class ConversationPipelineTests(unittest.TestCase):
         self.assertEqual(result["response"]["id"], "hello_shooter")
         self.assertEqual(result["text"], "Halo, pilot! Aku siap menemanimu.")
 
+    def test_curated_reply_uses_npc_personality_profile(self):
+        result = respond_to_context(context("Halo!"), PATTERNS, npc_personality="friendly")
+        self.assertEqual(result["status"], "response_selected")
+        self.assertEqual(result["text"], "Dengan senang hati, Halo, pilot! Aku siap menemanimu.")
+
     def test_unknown_message_does_not_guess_or_reply(self):
         result = respond_to_context(context("ceritakan tentang bintang yang jauh"), PATTERNS)
         self.assertEqual(result["status"], "no_response")
