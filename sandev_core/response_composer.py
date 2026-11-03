@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from personality import PersonalityError, apply_personality_style
+
 TRUSTED_SOURCES = {"engine_confirmed", "player_approved"}
 DEFAULT_TEMPLATES = {
     "family": "Yang kutahu, {fact}",
@@ -28,6 +30,7 @@ def compose_fact_response(
     *,
     templates: Mapping[str, str] | None = None,
     max_chars: int = 280,
+    personality: str = "neutral",
 ) -> dict[str, Any]:
     """Compose a concise authored-template reply from one trusted retrieved fact.
 
@@ -72,9 +75,17 @@ def compose_fact_response(
     if len(text) > max_chars:
         return {"status": "abstained", "text": None, "reason": "composed_response_too_long"}
 
+    try:
+        styled = apply_personality_style(text, personality, max_chars=max_chars)
+    except PersonalityError as exc:
+        raise ResponseComposerError(str(exc)) from exc
+    if styled["status"] != "styled":
+        return {"status": "abstained", "text": None, "reason": styled["reason"]}
+
     return {
         "status": "composed",
-        "text": text,
+        "text": styled["text"],
+        "personality": personality,
         "reason": "trusted_fact_inserted_into_authored_template",
         "fact_id": fact.get("id"),
         "reference_id": reference_id,
