@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from personality import PersonalityError, apply_personality_style
+from personality import PersonalityError, apply_personality_style, apply_emotion_style
 
 TRUSTED_SOURCES = {"engine_confirmed", "player_approved"}
 DEFAULT_TEMPLATES = {
@@ -31,6 +31,7 @@ def compose_fact_response(
     templates: Mapping[str, str] | None = None,
     max_chars: int = 280,
     personality: str = "neutral",
+    emotional_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compose a concise authored-template reply from one trusted retrieved fact.
 
@@ -81,10 +82,19 @@ def compose_fact_response(
         raise ResponseComposerError(str(exc)) from exc
     if styled["status"] != "styled":
         return {"status": "abstained", "text": None, "reason": styled["reason"]}
+    try:
+        emotional = apply_emotion_style(
+            styled["text"], emotional_state, max_chars=max_chars
+        )
+    except PersonalityError as exc:
+        raise ResponseComposerError(str(exc)) from exc
+    if emotional["status"] != "styled":
+        return {"status": "abstained", "text": None, "reason": emotional["reason"]}
 
     return {
         "status": "composed",
-        "text": styled["text"],
+        "text": emotional["text"],
+        "mood": emotional["mood"],
         "personality": personality,
         "reason": "trusted_fact_inserted_into_authored_template",
         "fact_id": fact.get("id"),
