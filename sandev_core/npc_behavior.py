@@ -110,18 +110,28 @@ def propose_behavior(
         if record is not None and not isinstance(record, Mapping):
             raise NPCBehaviorError(f"{name} must be an object or None")
 
-    npc_id = player_id = None
+    npc_id, player_id = context.get("npc_id"), context.get("player_id")
+    if (npc_id is None) != (player_id is None):
+        raise NPCBehaviorError("NPC context scope is incomplete")
+    if npc_id is not None and (
+        not isinstance(npc_id, str) or not npc_id.strip()
+        or not isinstance(player_id, str) or not player_id.strip()
+    ):
+        raise NPCBehaviorError("NPC context scope IDs must be non-empty strings")
     if relationship is not None:
-        npc_id, player_id = relationship.get("npc_id"), relationship.get("player_id")
-        if not isinstance(npc_id, str) or not npc_id.strip() or not isinstance(player_id, str) or not player_id.strip():
+        relationship_scope = (relationship.get("npc_id"), relationship.get("player_id"))
+        if not all(isinstance(value, str) and value.strip() for value in relationship_scope):
             raise NPCBehaviorError("relationship must include NPC and player scope IDs")
+        if npc_id is not None and (npc_id, player_id) != relationship_scope:
+            raise NPCBehaviorError("relationship scope does not match NPC context")
+        npc_id, player_id = relationship_scope
     if emotion is not None:
-        emotion_npc, emotion_player = emotion.get("npc_id"), emotion.get("player_id")
-        if not isinstance(emotion_npc, str) or not emotion_npc.strip() or not isinstance(emotion_player, str) or not emotion_player.strip():
+        emotion_scope = (emotion.get("npc_id"), emotion.get("player_id"))
+        if not all(isinstance(value, str) and value.strip() for value in emotion_scope):
             raise NPCBehaviorError("emotion must include NPC and player scope IDs")
-        if npc_id is not None and (npc_id, player_id) != (emotion_npc, emotion_player):
-            raise NPCBehaviorError("relationship and emotion scopes do not match")
-        npc_id, player_id = emotion_npc, emotion_player
+        if npc_id is not None and (npc_id, player_id) != emotion_scope:
+            raise NPCBehaviorError("emotion scope does not match NPC context")
+        npc_id, player_id = emotion_scope
     actor_id = context.get("actor_id")
     if npc_id is not None and actor_id is not None and actor_id != npc_id:
         raise NPCBehaviorError("context actor_id does not match the NPC scope")
