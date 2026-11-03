@@ -24,8 +24,8 @@ class FollowUpInputError(ValueError):
 
 def _normalize(value: str) -> str:
     value = unicodedata.normalize("NFKC", value).casefold()
-    value = re.sub(r"[^\\w\\s-]", " ", value)
-    return re.sub(r"\\s+", " ", value).strip()
+    value = re.sub(r"[^\w\s-]", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
 
 
 def resolve_follow_up(
@@ -79,7 +79,7 @@ def resolve_follow_up(
             raise FollowUpInputError("conversation turn text must be a string")
         normalized_turn = _normalize(text)
         for ref_id, terms in entries:
-            if any(re.search(r"(?<!\\w)" + re.escape(term) + r"(?!\\w)", normalized_turn) for term in terms):
+            if any(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", normalized_turn) for term in terms):
                 latest_by_id[ref_id] = index
 
     if not latest_by_id:
