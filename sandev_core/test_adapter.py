@@ -175,6 +175,25 @@ class GenericAdapterTests(unittest.TestCase):
         self.assertEqual(result["npc_routine"]["execution"], "not_performed")
         self.assertEqual(result["action"]["type"], "take_cover")
 
+    def test_npc_routine_uses_authoritative_world_context(self):
+        self.snapshot["npc_routine"] = {
+            "npc_id": "aria", "current_minute": 540, "day_of_week": 2,
+            "state": {}, "world": {"weather": "rain", "location": "market"},
+            "nearby_entity_ids": ["merchant-1"],
+            "allowed_activities": ["trade", "shelter"],
+            "routines": [
+                {"activity_id": "trade", "start_minute": 480, "end_minute": 600,
+                 "source": "engine_confirmed", "npc_id": "aria",
+                 "world_conditions": {"weather": "rain", "location": "market"},
+                 "requires_nearby": ["merchant-1"]},
+                {"activity_id": "shelter", "start_minute": 480, "end_minute": 600,
+                 "source": "engine_confirmed", "npc_id": "aria",
+                 "world_conditions": {"weather": "clear"}},
+            ],
+        }
+        result = decide_from_snapshot(self.snapshot)
+        self.assertEqual(result["npc_routine"]["proposal"]["activity_id"], "trade")
+
     def test_npc_routine_is_optional_and_legacy_shape_is_unchanged(self):
         result = decide_from_snapshot(self.snapshot)
         self.assertNotIn("npc_routine", result)
