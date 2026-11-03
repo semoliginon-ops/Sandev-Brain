@@ -164,9 +164,10 @@ def build_context(
     if isinstance(conversation_history, (str, bytes)):
         raise ContextInputError("conversation_history must be an iterable of dialogue objects")
     try:
+        # Validate the supplied sequence, then retain the most recent turns.
+        # Keeping the oldest prefix silently drops the immediate conversational
+        # context, which is especially harmful for follow-up questions.
         for item in conversation_history:
-            if len(dialogue) >= max_conversation_turns:
-                break
             if not isinstance(item, Mapping):
                 raise ContextInputError("each conversation turn must be an object")
             speaker, message, turn = item.get("speaker"), item.get("text"), item.get("turn")
@@ -178,6 +179,7 @@ def build_context(
                 raise ContextInputError("conversation turn must be a non-negative integer")
             dialogue.append({"speaker": speaker, "text": message, "turn": turn,
                              "trust": "unverified_dialogue"})
+        dialogue = dialogue[-max_conversation_turns:] if max_conversation_turns else []
     except TypeError as exc:
         raise ContextInputError("conversation_history must be iterable") from exc
 
