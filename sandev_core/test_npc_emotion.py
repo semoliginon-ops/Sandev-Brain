@@ -48,7 +48,7 @@ class NPCEmotionLedgerTests(unittest.TestCase):
                 result = ledger.apply_event("aria", "player-1", "betrayed_npc",
                                             source="engine_confirmed", turn=turn)
             self.assertEqual(result["values"]["anger"], 100)
-            later = ledger.snapshot("aria", "player-1", current_turn=100)
+            later = ledger.snapshot("aria", "player-1", current_turn=600)
             self.assertEqual(later["values"]["anger"], 0)
             self.assertEqual(later["values"]["trust"], 50)
 
