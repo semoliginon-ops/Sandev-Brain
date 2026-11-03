@@ -78,7 +78,7 @@ def score_prediction(raw: str, expected: Mapping[str, Any],
     elif isinstance(raw_action, dict):
         kind = raw_action.get("type")
         target = raw_action.get("target", "")
-        action_valid = (kind is None or (isinstance(kind, str) and kind in allowed)) and isinstance(target, str)
+        action_valid = isinstance(kind, str) and bool(kind) and kind in allowed and isinstance(target, str)
     else:
         action_valid = False
 
