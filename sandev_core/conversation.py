@@ -10,6 +10,7 @@ from typing import Any, Mapping, Sequence
 from intent import IntentInputError, classify_intent
 from language import LanguageInputError, select_response
 from followup import FollowUpInputError, resolve_follow_up
+from facts import FactLookupError, retrieve_entity_fact
 
 
 class ConversationPipelineError(ValueError):
@@ -22,6 +23,7 @@ def respond_to_context(
     *,
     max_chars: int = 280,
     reference_catalog: Sequence[Mapping[str, Any]] = (),
+    entity_facts: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Interpret the raw message in a context packet and select authored dialogue.
 
@@ -49,6 +51,13 @@ def respond_to_context(
         raise ConversationPipelineError(str(exc)) from exc
 
     try:
+        fact_lookup = retrieve_entity_fact(
+            follow_up.get("reference_id"), follow_up.get("aspect"), entity_facts
+        )
+    except FactLookupError as exc:
+        raise ConversationPipelineError(str(exc)) from exc
+
+    try:
         interpretation = classify_intent(message, context={"game_id": context.get("game_id", "unspecified")})
     except IntentInputError as exc:
         raise ConversationPipelineError(str(exc)) from exc
@@ -59,6 +68,7 @@ def respond_to_context(
             "text": None,
             "interpretation": interpretation,
             "follow_up": follow_up,
+            "fact_lookup": fact_lookup,
             "response": None,
             "reason": "intent_not_confidently_matched",
         }
@@ -76,6 +86,7 @@ def respond_to_context(
             "text": response["text"],
             "interpretation": interpretation,
             "follow_up": follow_up,
+            "fact_lookup": fact_lookup,
             "response": response,
             "reason": "matched_intent_and_curated_response",
         }
