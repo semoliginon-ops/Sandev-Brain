@@ -44,7 +44,7 @@ class NPCMemoryLedgerTests(unittest.TestCase):
 
     def test_priority_decay_demotes_old_memories_but_preserves_important_ones(self):
         with tempfile.TemporaryDirectory() as folder:
-            ledger = NPCMemoryLedger(Path(folder) / "npc-memory.json", decay_interval=10)
+            ledger = NPCMemoryLedger(Path(folder) / "npc-memory.json", decay_interval=5)
             ledger.record_event("aria", "player-1", "small talk",
                                 source="engine_confirmed", turn=1, importance=1)
             ledger.record_event("aria", "player-1", "kept promise",
