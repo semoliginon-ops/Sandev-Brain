@@ -118,7 +118,7 @@ def decide_from_snapshot(
     if npc_config is not None:
         npc = _mapping(npc_config, "npc_behavior")
         npc_id = _string(npc.get("npc_id"), "npc_behavior.npc_id")
-        _string(npc.get("player_id"), "npc_behavior.player_id")
+        player_id = _string(npc.get("player_id"), "npc_behavior.player_id")
         npc_allowed = _string_list(
             npc.get("allowed_actions"), "npc_behavior.allowed_actions"
         )
