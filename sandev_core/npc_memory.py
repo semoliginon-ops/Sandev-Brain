@@ -42,11 +42,14 @@ def _identity(value: str, name: str) -> str:
 class NPCMemoryLedger:
     """Bounded persistent memory, strictly scoped to an NPC and player pair."""
 
-    def __init__(self, path: str | Path, *, max_items: int = 500):
+    def __init__(self, path: str | Path, *, max_items: int = 500, decay_interval: int = 50):
         self.path = Path(path)
         if isinstance(max_items, bool) or not isinstance(max_items, int) or max_items < 1:
             raise NPCMemoryError("max_items must be a positive integer")
+        if isinstance(decay_interval, bool) or not isinstance(decay_interval, int) or decay_interval < 1:
+            raise NPCMemoryError("decay_interval must be a positive integer")
         self.max_items = max_items
+        self.decay_interval = decay_interval
         self.path.parent.mkdir(parents=True, exist_ok=True)
         try:
             loaded = json.loads(self.path.read_text(encoding="utf-8"))
@@ -129,11 +132,14 @@ class NPCMemoryLedger:
     def retrieve(
         self, npc_id: str, player_id: str, *,
         tags: Iterable[str] = (), limit: int = 8,
+        current_turn: int | None = None,
     ) -> list[dict[str, Any]]:
         npc_id = _identity(npc_id, "npc_id")
         player_id = _identity(player_id, "player_id")
         if isinstance(limit, bool) or not isinstance(limit, int) or limit < 0:
             raise NPCMemoryError("limit must be a non-negative integer")
+        if current_turn is not None and (isinstance(current_turn, bool) or not isinstance(current_turn, int) or current_turn < 0):
+            raise NPCMemoryError("current_turn must be a non-negative integer")
         requested = {tag.strip() for tag in tags
                      if isinstance(tag, str) and tag.strip()}
         candidates = []
@@ -146,10 +152,48 @@ class NPCMemoryLedger:
             overlap = len(requested & item_tags)
             if requested and overlap == 0 and item_tags:
                 continue
-            candidates.append((overlap, int(item.get("importance", 0)),
-                               int(item.get("turn", 0)), item))
+            importance = max(0, min(3, int(item.get("importance", 0))))
+            turn = max(0, int(item.get("turn", 0)))
+            age = max(0, current_turn - turn) if current_turn is not None else 0
+            decay = age // self.decay_interval
+            priority = max(0, importance * 10 - decay)
+            # Critical memories (importance 3), including promises/facts, are retained.
+            if importance < 3 and priority == 0:
+                continue
+            candidates.append((priority, overlap, turn, item))
         candidates.sort(key=lambda row: (-row[0], -row[1], -row[2]))
         return [dict(row[3]) for row in candidates[:limit]]
+
+    def forget_expired(
+        self, *, current_turn: int, max_age: int = 200,
+        max_importance: int = 1,
+    ) -> int:
+        """Remove only old low-importance memories; critical memories are protected."""
+        if isinstance(current_turn, bool) or not isinstance(current_turn, int) or current_turn < 0:
+            raise NPCMemoryError("current_turn must be a non-negative integer")
+        if isinstance(max_age, bool) or not isinstance(max_age, int) or max_age < 0:
+            raise NPCMemoryError("max_age must be a non-negative integer")
+        if isinstance(max_importance, bool) or not isinstance(max_importance, int) or not 0 <= max_importance < 3:
+            raise NPCMemoryError("max_importance must be between 0 and 2")
+        before = len(self.items)
+        self.items = [
+            item for item in self.items
+            if not (
+                isinstance(item, dict)
+                and item.get("kind") == "event"
+                and isinstance(item.get("turn"), int)
+                and not isinstance(item.get("turn"), bool)
+                and 0 <= current_turn - item["turn"]
+                and current_turn - item["turn"] >= max_age
+                and isinstance(item.get("importance"), int)
+                and not isinstance(item.get("importance"), bool)
+                and item["importance"] <= max_importance
+            )
+        ]
+        removed = before - len(self.items)
+        if removed:
+            self._save()
+        return removed
 
 
 class RelationshipLedger:
