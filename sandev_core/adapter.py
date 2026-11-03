@@ -12,6 +12,7 @@ from typing import Any, Mapping
 from brain import ActionCandidate, choose_action, decision_to_dict
 from npc_behavior import NPCBehaviorError, propose_behavior
 from npc_routine import NPCRoutineError, propose_routine
+from npc_social import NPCSocialError, propose_social_interaction
 
 
 class AdapterInputError(ValueError):
@@ -161,5 +162,27 @@ def decide_from_snapshot(
             result["npc_routine"] = propose_routine(routine_context, allowed_activities=activities)
         except NPCRoutineError as exc:
             raise AdapterInputError(f"npc_routine: {exc}") from exc
+
+    # Optional, genre-neutral NPC-to-NPC social interaction channel.
+    social_config = data.get("npc_social")
+    if social_config is not None:
+        social = _mapping(social_config, "npc_social")
+        social_context = {
+            "npc_id": _string(social.get("npc_id"), "npc_social.npc_id"),
+            "nearby_npc_ids": social.get("nearby_npc_ids", []),
+            "state": _mapping(social.get("state", {}), "npc_social.state"),
+            "relationships": social.get("relationships", []),
+        }
+        social_allowed = _string_list(
+            social.get("allowed_actions"), "npc_social.allowed_actions"
+        )
+        try:
+            result["npc_social"] = propose_social_interaction(
+                social_context,
+                personality=social.get("personality", "neutral"),
+                allowed_actions=social_allowed,
+            )
+        except NPCSocialError as exc:
+            raise AdapterInputError(f"npc_social: {exc}") from exc
 
     return result
