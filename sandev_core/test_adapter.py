@@ -160,6 +160,38 @@ class GenericAdapterTests(unittest.TestCase):
             result["npc_behavior"]["proposal"]["reason_tags"],
         )
 
+    def test_optional_npc_routine_proposes_activity_without_execution(self):
+        self.snapshot["npc_routine"] = {
+            "npc_id": "aria", "current_minute": 540, "day_of_week": 2,
+            "state": {"rain": False}, "allowed_activities": ["work", "shelter"],
+            "routines": [{
+                "activity_id": "work", "start_minute": 480, "end_minute": 600,
+                "source": "engine_confirmed", "npc_id": "aria",
+                "conditions": {"rain": False},
+            }],
+        }
+        result = decide_from_snapshot(self.snapshot)
+        self.assertEqual(result["npc_routine"]["proposal"]["activity_id"], "work")
+        self.assertEqual(result["npc_routine"]["execution"], "not_performed")
+        self.assertEqual(result["action"]["type"], "take_cover")
+
+    def test_npc_routine_is_optional_and_legacy_shape_is_unchanged(self):
+        result = decide_from_snapshot(self.snapshot)
+        self.assertNotIn("npc_routine", result)
+        self.assertNotIn("npc_behavior", result)
+
+    def test_npc_routine_rejects_invalid_schedule(self):
+        self.snapshot["npc_routine"] = {
+            "npc_id": "aria", "current_minute": 540, "day_of_week": 2,
+            "allowed_activities": ["work"],
+            "routines": [{
+                "activity_id": "work", "start_minute": 700, "end_minute": 600,
+                "source": "engine_confirmed", "npc_id": "aria",
+            }],
+        }
+        with self.assertRaisesRegex(AdapterInputError, "time window"):
+            decide_from_snapshot(self.snapshot)
+
 
 if __name__ == "__main__":
     unittest.main()
