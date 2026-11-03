@@ -136,10 +136,74 @@ class NPCBehaviorProposalTests(unittest.TestCase):
             propose_behavior({"state": {}}, personality="unknown",
                              allowed_actions=["idle"])
 
+    def test_untrusted_or_unscoped_goals_cannot_change_behavior(self):
+        base = {"npc_id": "aria", "player_id": "player-1",
+                "state": {"under_threat": True, "escape_route_available": True}}
+        untrusted = dict(base, goals=[{
+            "tag": "survive", "priority": 100, "source": "model_guess",
+            "npc_id": "aria", "player_id": "player-1",
+        }])
+        wrong_scope = dict(base, goals=[{
+            "tag": "survive", "priority": 100, "source": "engine_confirmed",
+            "npc_id": "borin", "player_id": "player-1",
+        }])
+        for context in (untrusted, wrong_scope):
+            result = propose_behavior(
+                context, allowed_actions=["flee", "guard_player"]
+            )
+            self.assertEqual(result["proposal"]["action_id"], "guard_player")
+            self.assertFalse(any(
+                reason.startswith("goal_survive")
+                for reason in result["proposal"]["reason_tags"]
+            ))
+
+    def test_goal_priority_changes_motivation_strength(self):
+        base = {"npc_id": "aria", "player_id": "player-1",
+                "state": {"under_threat": True, "escape_route_available": True}}
+        def with_priority(priority):
+            return propose_behavior(
+                dict(base, goals=[{
+                    "tag": "survive", "priority": priority,
+                    "source": "engine_confirmed",
+                    "npc_id": "aria", "player_id": "player-1",
+                }]),
+                allowed_actions=["flee", "guard_player"],
+            )
+        self.assertEqual(with_priority(100)["proposal"]["action_id"], "flee")
+        self.assertEqual(with_priority(10)["proposal"]["action_id"], "guard_player")
+
+    def test_inactive_and_unknown_goals_do_not_motivate(self):
+        context = {
+            "npc_id": "aria", "player_id": "player-1",
+            "state": {"under_threat": True, "escape_route_available": True},
+            "goals": [
+                {"tag": "survive", "priority": 100, "active": False,
+                 "source": "engine_confirmed", "npc_id": "aria", "player_id": "player-1"},
+                {"tag": "invented_goal", "priority": 100, "active": True,
+                 "source": "engine_confirmed", "npc_id": "aria", "player_id": "player-1"},
+            ],
+        }
+        result = propose_behavior(context, allowed_actions=["flee", "guard_player"])
+        self.assertEqual(result["proposal"]["action_id"], "guard_player")
+
+    def test_invalid_trusted_goal_priority_is_rejected(self):
+        context = {
+            "npc_id": "aria", "player_id": "player-1", "state": {},
+            "goals": [{
+                "tag": "survive", "priority": 101,
+                "source": "engine_confirmed", "npc_id": "aria", "player_id": "player-1",
+            }],
+        }
+        with self.assertRaisesRegex(NPCBehaviorError, "priority"):
+            propose_behavior(context, allowed_actions=["flee"])
+
     def test_goal_and_escape_signals_are_combined(self):
         result = propose_behavior(
-            {"state": {"under_threat": True, "escape_route_available": True},
-             "goals": [{"tag": "survive", "priority": 1.0}]},
+            {"npc_id": "aria", "player_id": "player-1",
+             "state": {"under_threat": True, "escape_route_available": True},
+             "goals": [{"tag": "survive", "priority": 100,
+                        "source": "engine_confirmed",
+                        "npc_id": "aria", "player_id": "player-1"}]},
             allowed_actions=["flee", "guard_player"],
         )
         self.assertEqual(result["proposal"]["action_id"], "flee")
