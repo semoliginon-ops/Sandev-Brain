@@ -42,6 +42,40 @@ class NPCMemoryLedgerTests(unittest.TestCase):
             self.assertEqual(ledger.retrieve("aria", "player-2")[0]["value"],
                              "South village")
 
+    def test_priority_decay_demotes_old_memories_but_preserves_important_ones(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = NPCMemoryLedger(Path(folder) / "npc-memory.json", decay_interval=10)
+            ledger.record_event("aria", "player-1", "small talk",
+                                source="engine_confirmed", turn=1, importance=1)
+            ledger.record_event("aria", "player-1", "kept promise",
+                                source="engine_confirmed", turn=1, importance=3,
+                                tags=["promise"])
+            ledger.record_event("aria", "player-1", "recent greeting",
+                                source="engine_confirmed", turn=95, importance=1)
+            found = ledger.retrieve("aria", "player-1", current_turn=100)
+            self.assertEqual([item["event"] for item in found],
+                             ["kept promise", "recent greeting"])
+
+    def test_forget_expired_removes_only_old_low_importance_events(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = NPCMemoryLedger(Path(folder) / "npc-memory.json")
+            ledger.record_event("aria", "player-1", "old minor detail",
+                                source="engine_confirmed", turn=1, importance=1)
+            ledger.record_event("aria", "player-1", "important promise",
+                                source="engine_confirmed", turn=1, importance=3)
+            ledger.record_event("aria", "player-1", "recent detail",
+                                source="engine_confirmed", turn=95, importance=1)
+            removed = ledger.forget_expired(current_turn=100, max_age=50)
+            self.assertEqual(removed, 1)
+            remaining = [item["event"] for item in ledger.retrieve("aria", "player-1")]
+            self.assertEqual(set(remaining), {"important promise", "recent detail"})
+
+    def test_forgetting_rejects_invalid_turn(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = NPCMemoryLedger(Path(folder) / "npc-memory.json")
+            with self.assertRaises(NPCMemoryError):
+                ledger.forget_expired(current_turn=-1)
+
     def test_memory_limit_and_validation(self):
         with tempfile.TemporaryDirectory() as folder:
             ledger = NPCMemoryLedger(Path(folder) / "npc-memory.json", max_items=2)
