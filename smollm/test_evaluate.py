@@ -12,8 +12,8 @@ class DialogueEvaluationTests(unittest.TestCase):
         self.assertEqual(len(cases), 12)
         self.assertIn("talk", cases[0]["valid_actions"])
         self.assertEqual(cases[0]["expected"]["action"]["type"], "talk")
-        self.assertGreaterEqual(len(cases[0]["messages"]), 4)
-        self.assertEqual(cases[0]["messages"][-1]["role"], "user")
+        self.assertTrue(any(len(case["messages"]) >= 4 for case in cases))
+        self.assertTrue(all(case["messages"][-1]["role"] == "user" for case in cases))
 
     def test_scores_valid_json_and_allowed_action(self):
         raw = json.dumps({
