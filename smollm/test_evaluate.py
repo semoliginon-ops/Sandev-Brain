@@ -7,11 +7,13 @@ from evaluate import EvaluationError, load_cases, score_prediction, summarize_sc
 
 
 class DialogueEvaluationTests(unittest.TestCase):
-    def test_loads_existing_eval_dataset(self):
+    def test_loads_expanded_eval_dataset_with_multi_turn_context(self):
         cases = load_cases("smollm/data/eval.jsonl")
-        self.assertEqual(len(cases), 4)
+        self.assertEqual(len(cases), 12)
         self.assertIn("talk", cases[0]["valid_actions"])
         self.assertEqual(cases[0]["expected"]["action"]["type"], "talk")
+        self.assertGreaterEqual(len(cases[0]["messages"]), 4)
+        self.assertEqual(cases[0]["messages"][-1]["role"], "user")
 
     def test_scores_valid_json_and_allowed_action(self):
         raw = json.dumps({
