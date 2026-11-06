@@ -46,6 +46,33 @@ class FollowUpResolutionTests(unittest.TestCase):
         )
         self.assertEqual(result["aspect"], "motive")
 
+    def test_aspect_matching_uses_word_boundaries_and_indonesian_possessives(self):
+        cases = (
+            ("Bagaimana dengan ayahnya?", "family"),
+            ("Bagaimana dengan istrinya?", "family"),
+            ("Bagaimana dengan desanya?", "location"),
+            ("Bagaimana dengan rumahnya?", "location"),
+        )
+        for message, expected_aspect in cases:
+            with self.subTest(message=message):
+                result = resolve_follow_up(
+                    message,
+                    [{"text": "Aku bertemu Aria di desa."}],
+                    CATALOG,
+                )
+                self.assertEqual(result["aspect"], expected_aspect)
+
+    def test_unrelated_words_do_not_trigger_family_aspect_substrings(self):
+        for message in ("Bagaimana dengan wilayahnya?", "Bagaimana dengan ributnya?"):
+            with self.subTest(message=message):
+                result = resolve_follow_up(
+                    message,
+                    [{"text": "Aku bertemu Aria di desa."}],
+                    CATALOG,
+                )
+                self.assertEqual(result["status"], "resolved")
+                self.assertEqual(result["aspect"], "general_details")
+
     def test_prefers_most_recent_reference_mention(self):
         result = resolve_follow_up(
             "Ceritakan lebih banyak",

@@ -20,19 +20,28 @@ FOLLOW_UP_CUES = (
 )
 
 
+def _contains_phrase(text: str, phrase: str, *, possessive: bool = False) -> bool:
+    """Match a whole word/phrase, optionally allowing common Indonesian possessives."""
+    escaped = re.escape(phrase)
+    if " " in phrase:
+        escaped = escaped.replace(r"\ ", r"\s+")
+    suffix = r"(?:nya|ku|mu)?" if possessive and " " not in phrase else ""
+    return re.search(r"(?<!\w)" + escaped + suffix + r"(?!\w)", text) is not None
+
+
 def _classify_aspect(message: str) -> str | None:
     """Return a supported question aspect without inferring its answer."""
     text = _normalize(message)
     groups = (
-        ("family", ("keluarga", "ayah", "ibu", "saudara", "adik", "kakak", "anaknya", "istrinya", "suaminya")),
-        ("location", ("tinggal di mana", "di mana dia", "berasal dari mana", "tempat tinggal", "rumahnya", "desanya")),
+        ("family", ("keluarga", "ayah", "ibu", "saudara", "adik", "kakak", "anak", "istri", "suami")),
+        ("location", ("tinggal di mana", "di mana dia", "berasal dari mana", "tempat tinggal", "rumah", "desa")),
         ("motive", ("kenapa", "mengapa", "alasan", "motif", "melakukan itu")),
         ("identity", ("dia siapa", "siapa dia", "identitas", "asal usul")),
     )
     for aspect, terms in groups:
-        if any(term in text for term in terms):
+        if any(_contains_phrase(text, term, possessive=True) for term in terms):
             return aspect
-    if any(cue in text for cue in FOLLOW_UP_CUES):
+    if any(_contains_phrase(text, cue) for cue in FOLLOW_UP_CUES):
         return "general_details"
     return None
 
