@@ -73,6 +73,32 @@ class FollowUpResolutionTests(unittest.TestCase):
                 self.assertEqual(result["status"], "resolved")
                 self.assertEqual(result["aspect"], "general_details")
 
+    def test_plain_statements_do_not_trigger_follow_up_aspects(self):
+        messages = (
+            "Aku bertemu ayahnya kemarin.",
+            "Keluarganya sedang menunggu.",
+            "Dia tinggal di desa.",
+        )
+        for message in messages:
+            with self.subTest(message=message):
+                result = resolve_follow_up(
+                    message,
+                    [{"text": "Aku bertemu Aria di desa."}],
+                    CATALOG,
+                )
+                self.assertEqual(result["status"], "not_follow_up")
+                self.assertIsNone(result["aspect"])
+
+    def test_imperative_follow_up_without_question_mark_is_still_recognized(self):
+        result = resolve_follow_up(
+            "Ceritakan lebih banyak tentang keluarganya",
+            [{"text": "Aku bertemu Aria di desa."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["aspect"], "family")
+
     def test_prefers_most_recent_reference_mention(self):
         result = resolve_follow_up(
             "Ceritakan lebih banyak",

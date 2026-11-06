@@ -18,6 +18,14 @@ FOLLOW_UP_CUES = (
     "keluarganya", "tinggal di mana", "di mana dia", "berasal dari mana",
     "apa pekerjaannya", "siapa keluarganya",
 )
+FOLLOW_UP_REQUEST_PREFIXES = (
+    "dia siapa", "siapa dia", "mereka siapa", "orang itu siapa", "yang tadi",
+    "ceritakan lebih banyak", "cerita lebih lanjut", "bagaimana dengan",
+    "kenapa dia", "mengapa dia", "apa maksudnya", "tinggal di mana",
+    "di mana dia", "berasal dari mana", "apa pekerjaannya",
+    "siapa keluarganya", "ceritakan tentang", "jelaskan tentang",
+    "tolong ceritakan", "bisa ceritakan", "coba jelaskan",
+)
 
 
 def _contains_phrase(text: str, phrase: str, *, possessive: bool = False) -> bool:
@@ -29,8 +37,24 @@ def _contains_phrase(text: str, phrase: str, *, possessive: bool = False) -> boo
     return re.search(r"(?<!\w)" + escaped + suffix + r"(?!\w)", text) is not None
 
 
+def _normalize(value: str) -> str:
+    value = unicodedata.normalize("NFKC", value).casefold()
+    value = re.sub(r"[^\w\s-]", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _is_follow_up_request(message: str) -> bool:
+    """Avoid treating ordinary statements about an entity as questions."""
+    if "?" in message:
+        return True
+    text = _normalize(message)
+    return any(text == cue or text.startswith(cue + " ") for cue in FOLLOW_UP_REQUEST_PREFIXES)
+
+
 def _classify_aspect(message: str) -> str | None:
     """Return a supported question aspect without inferring its answer."""
+    if not _is_follow_up_request(message):
+        return None
     text = _normalize(message)
     groups = (
         ("family", ("keluarga", "ayah", "ibu", "saudara", "adik", "kakak", "anak", "istri", "suami")),
@@ -50,12 +74,6 @@ class FollowUpInputError(ValueError):
     """Raised when follow-up resolution input is malformed."""
 
 
-def _normalize(value: str) -> str:
-    value = unicodedata.normalize("NFKC", value).casefold()
-    value = re.sub(r"[^\w\s-]", " ", value)
-    return re.sub(r"\s+", " ", value).strip()
-
-
 def resolve_follow_up(
     message: str,
     conversation_history: Sequence[Mapping[str, Any]],
@@ -73,13 +91,12 @@ def resolve_follow_up(
     if isinstance(reference_catalog, (str, bytes)) or not isinstance(reference_catalog, Sequence):
         raise FollowUpInputError("reference_catalog must be a sequence")
 
-    normalized_message = _normalize(message)
-    aspect = _classify_aspect(normalized_message)
+    aspect = _classify_aspect(message)
     is_follow_up = aspect is not None
     if not is_follow_up:
         return {"status": "not_follow_up", "reference_id": None, "candidates": [],
                 "aspect": None, "reason": "no_supported_follow_up_cue"}
-    
+
     entries: list[tuple[str, list[str]]] = []
     seen_ids: set[str] = set()
     for item in reference_catalog:
