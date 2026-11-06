@@ -134,6 +134,10 @@ def classify_intent(
             raise IntentInputError("pattern weight must be greater than 0 and at most 1")
         for phrase in phrases:
             normalized_phrase = normalize_text(phrase)
+            if not any(character.isalnum() for character in normalized_phrase):
+                raise IntentInputError(
+                    "intent phrases must contain letters or numbers after normalization"
+                )
             pair = (intent, normalized_phrase)
             if pair in seen:
                 raise IntentInputError(f"duplicate intent phrase: {intent}/{normalized_phrase}")
