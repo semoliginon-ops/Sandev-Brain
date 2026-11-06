@@ -155,6 +155,15 @@ class IndonesianIntentTests(unittest.TestCase):
         with self.assertRaises(IntentInputError):
             classify_intent("hai", patterns=[{"intent": "x", "phrases": ["hai", "hai"]}])
 
+    def test_rejects_phrases_without_alphanumeric_content_after_normalization(self):
+        for phrase in ("!!!", "---", "___"):
+            with self.subTest(phrase=phrase):
+                with self.assertRaises(IntentInputError):
+                    classify_intent(
+                        "halo",
+                        patterns=[{"intent": "invalid", "phrases": [phrase]}],
+                    )
+
     def test_does_not_guess_from_context_only(self):
         result = classify_intent("hmm...", context={"game_id": "rpg", "needs": {"health": 99}})
         self.assertEqual(result["intent"], "unknown")
