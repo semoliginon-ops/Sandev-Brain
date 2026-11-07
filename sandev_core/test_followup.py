@@ -1,0 +1,195 @@
+import unittest
+
+from followup import FollowUpInputError, resolve_follow_up
+
+
+CATALOG = [
+    {"id": "npc_aria", "name": "Aria", "aliases": ["kapten Aria"], "source": "engine_confirmed"},
+    {"id": "npc_bram", "name": "Bram", "aliases": [], "source": "engine_confirmed"},
+]
+
+
+class FollowUpResolutionTests(unittest.TestCase):
+    def test_resolves_unique_recent_trusted_reference(self):
+        result = resolve_follow_up(
+            "Dia siapa?",
+            [{"speaker": "npc", "text": "Aku bertemu Aria di desa."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["aspect"], "identity")
+
+    def test_classifies_family_question_without_inventing_answer(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarganya?",
+            [{"text": "Aku bertemu Aria di desa."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["aspect"], "family")
+
+    def test_classifies_location_question(self):
+        result = resolve_follow_up(
+            "Dia tinggal di mana?",
+            [{"text": "Aria berasal dari utara."}],
+            CATALOG,
+        )
+        self.assertEqual(result["aspect"], "location")
+
+    def test_classifies_motive_question(self):
+        result = resolve_follow_up(
+            "Kenapa dia melakukan itu?",
+            [{"text": "Aria datang."}],
+            CATALOG,
+        )
+        self.assertEqual(result["aspect"], "motive")
+
+    def test_aspect_matching_uses_word_boundaries_and_indonesian_possessives(self):
+        cases = (
+            ("Bagaimana dengan ayahnya?", "family"),
+            ("Bagaimana dengan istrinya?", "family"),
+            ("Bagaimana dengan desanya?", "location"),
+            ("Bagaimana dengan rumahnya?", "location"),
+        )
+        for message, expected_aspect in cases:
+            with self.subTest(message=message):
+                result = resolve_follow_up(
+                    message,
+                    [{"text": "Aku bertemu Aria di desa."}],
+                    CATALOG,
+                )
+                self.assertEqual(result["aspect"], expected_aspect)
+
+    def test_unrelated_words_do_not_trigger_family_aspect_substrings(self):
+        for message in ("Bagaimana dengan wilayahnya?", "Bagaimana dengan ributnya?"):
+            with self.subTest(message=message):
+                result = resolve_follow_up(
+                    message,
+                    [{"text": "Aku bertemu Aria di desa."}],
+                    CATALOG,
+                )
+                self.assertEqual(result["status"], "resolved")
+                self.assertEqual(result["aspect"], "general_details")
+
+    def test_plain_statements_do_not_trigger_follow_up_aspects(self):
+        messages = (
+            "Aku bertemu ayahnya kemarin.",
+            "Keluarganya sedang menunggu.",
+            "Dia tinggal di desa.",
+        )
+        for message in messages:
+            with self.subTest(message=message):
+                result = resolve_follow_up(
+                    message,
+                    [{"text": "Aku bertemu Aria di desa."}],
+                    CATALOG,
+                )
+                self.assertEqual(result["status"], "not_follow_up")
+                self.assertIsNone(result["aspect"])
+
+    def test_imperative_follow_up_without_question_mark_is_still_recognized(self):
+        result = resolve_follow_up(
+            "Ceritakan lebih banyak tentang keluarganya",
+            [{"text": "Aku bertemu Aria di desa."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["aspect"], "family")
+
+    def test_prefers_most_recent_reference_mention(self):
+        result = resolve_follow_up(
+            "Ceritakan lebih banyak",
+            [{"text": "Aria datang."}, {"text": "Lalu aku bertemu Bram."}],
+            CATALOG,
+        )
+        self.assertEqual(result["reference_id"], "npc_bram")
+
+    def test_explicit_host_focus_overrides_latest_text_mention(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarganya?",
+            [
+                {"text": "Aku bertemu Aria."},
+                {"text": "Aku juga mengenal Bram."},
+            ],
+            CATALOG,
+            focus_entity_id="npc_aria",
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["reason"], "explicit_engine_focus_reference")
+
+    def test_current_message_entity_name_overrides_older_history_mention(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarga Aria?",
+            [
+                {"text": "Aku bertemu Aria."},
+                {"text": "Aku juga mengenal Bram."},
+            ],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["reason"], "explicit_entity_mention_in_current_message")
+
+    def test_multiple_entities_named_in_current_follow_up_are_ambiguous(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarga Aria dan Bram?",
+            [{"text": "Aku bertemu Aria."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "ambiguous")
+        self.assertEqual(result["reference_id"], None)
+        self.assertEqual(result["candidates"], ["npc_aria", "npc_bram"])
+        self.assertEqual(
+            result["reason"],
+            "multiple_trusted_references_named_in_current_message",
+        )
+
+    def test_untrusted_explicit_focus_does_not_fall_back_to_history(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarganya?",
+            [{"text": "Aku bertemu Bram."}],
+            CATALOG,
+            focus_entity_id="npc_untrusted",
+        )
+        self.assertEqual(result["status"], "unresolved")
+        self.assertEqual(result["reason"], "explicit_focus_not_in_trusted_catalog")
+
+    def test_abstains_when_latest_turn_mentions_multiple_references(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan mereka?",
+            [{"text": "Aria dan Bram sedang berjaga."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "ambiguous")
+        self.assertIsNone(result["reference_id"])
+
+    def test_ignores_untrusted_catalog_entries(self):
+        catalog = CATALOG + [
+            {"id": "fake", "name": "Raja Bayangan", "aliases": [], "source": "model_guess"}
+        ]
+        result = resolve_follow_up(
+            "Siapa dia?",
+            [{"text": "Raja Bayangan muncul."}],
+            catalog,
+        )
+        self.assertEqual(result["status"], "unresolved")
+
+    def test_does_not_resolve_without_follow_up_cue(self):
+        result = resolve_follow_up("Halo!", [{"text": "Aria datang."}], CATALOG)
+        self.assertEqual(result["status"], "not_follow_up")
+
+    def test_unresolved_when_dialogue_has_no_catalog_reference(self):
+        result = resolve_follow_up("Kenapa dia melakukan itu?", [{"text": "Ada seseorang."}], CATALOG)
+        self.assertEqual(result["status"], "unresolved")
+
+    def test_rejects_malformed_trusted_catalog_entry(self):
+        with self.assertRaises(FollowUpInputError):
+            resolve_follow_up("Dia siapa?", [], [{"id": "x", "source": "engine_confirmed"}])
+
+
+if __name__ == "__main__":
+    unittest.main()
