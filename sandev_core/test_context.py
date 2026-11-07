@@ -44,6 +44,21 @@ class ContextPacketTests(unittest.TestCase):
                 self.assertTrue(all(m["source"] in {"engine_confirmed", "player_approved"}
                                     for m in packet["memories"]))
 
+    def test_preserves_optional_host_focus_entity_id(self):
+        packet = build_context(
+            {"state": {}, "focus_entity_id": "npc_aria"},
+            actor_id="aria",
+        )
+        self.assertEqual(packet["focus_entity_id"], "npc_aria")
+
+    def test_rejects_malformed_host_focus_entity_id(self):
+        for focus_id in ("", "  ", 42, []):
+            with self.subTest(focus_id=focus_id), self.assertRaises(ContextInputError):
+                build_context(
+                    {"state": {}, "focus_entity_id": focus_id},
+                    actor_id="aria",
+                )
+
     def test_only_provenance_checked_recent_events_are_included(self):
         packet = build_context(
             {"state": {}}, actor_id="joni",

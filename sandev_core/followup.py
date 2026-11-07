@@ -78,11 +78,14 @@ def resolve_follow_up(
     message: str,
     conversation_history: Sequence[Mapping[str, Any]],
     reference_catalog: Sequence[Mapping[str, Any]],
+    *,
+    focus_entity_id: str | None = None,
 ) -> dict[str, Any]:
-    """Resolve a follow-up to the most recently mentioned trusted catalog entry.
+    """Resolve a follow-up using an explicit host focus or recent dialogue.
 
-    This deliberately small Indonesian heuristic abstains when no unique
-    catalog-backed referent exists. It does not infer facts or authorize actions.
+    An explicit focus is accepted only when it matches a trusted catalog entry.
+    An invalid explicit focus causes abstention; when omitted, the conservative
+    recent-mention heuristic is used. This resolves references, not facts/actions.
     """
     if not isinstance(message, str):
         raise FollowUpInputError("message must be a string")
@@ -90,6 +93,10 @@ def resolve_follow_up(
         raise FollowUpInputError("conversation_history must be a sequence")
     if isinstance(reference_catalog, (str, bytes)) or not isinstance(reference_catalog, Sequence):
         raise FollowUpInputError("reference_catalog must be a sequence")
+    if focus_entity_id is not None and (
+        not isinstance(focus_entity_id, str) or not focus_entity_id.strip()
+    ):
+        raise FollowUpInputError("focus_entity_id must be a non-empty string or None")
 
     aspect = _classify_aspect(message)
     is_follow_up = aspect is not None
@@ -115,6 +122,19 @@ def resolve_follow_up(
         seen_ids.add(ref_id)
         terms = [_normalize(name)] + [_normalize(x) for x in aliases if x.strip()]
         entries.append((ref_id, [term for term in terms if term]))
+
+    if focus_entity_id is not None:
+        if not any(ref_id == focus_entity_id for ref_id, _ in entries):
+            return {
+                "status": "unresolved", "reference_id": None, "candidates": [],
+                "aspect": aspect, "reason": "explicit_focus_not_in_trusted_catalog",
+            }
+        return {
+            "status": "resolved", "reference_id": focus_entity_id,
+            "candidates": [focus_entity_id], "aspect": aspect,
+            "reason": "explicit_engine_focus_reference",
+            "reference_source": "trusted_catalog",
+        }
 
     latest_by_id: dict[str, int] = {}
     for index, turn in enumerate(conversation_history):

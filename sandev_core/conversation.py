@@ -49,6 +49,7 @@ def respond_to_context(
             message,
             context.get("conversation_history", []),
             reference_catalog,
+            focus_entity_id=context.get("focus_entity_id"),
         )
     except FollowUpInputError as exc:
         raise ConversationPipelineError(str(exc)) from exc

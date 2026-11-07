@@ -76,6 +76,11 @@ def build_context(
         raise ContextInputError("snapshot must be an object")
     if not isinstance(actor_id, str) or not actor_id.strip():
         raise ContextInputError("actor_id must be a non-empty string")
+    focus_entity_id = snapshot.get("focus_entity_id")
+    if focus_entity_id is not None and (
+        not isinstance(focus_entity_id, str) or not focus_entity_id.strip()
+    ):
+        raise ContextInputError("snapshot.focus_entity_id must be a non-empty string when provided")
     if not isinstance(player_message, str):
         raise ContextInputError("player_message must be a string")
     if max_message_chars < 0 or len(player_message) > max_message_chars:
@@ -190,6 +195,7 @@ def build_context(
         "context_version": "1.0",
         "game_id": snapshot.get("game_id", "unspecified"),
         "actor_id": actor_id,
+        "focus_entity_id": focus_entity_id,
         "state_version": snapshot.get("state_version"),
         "state": state,
         "needs": needs,

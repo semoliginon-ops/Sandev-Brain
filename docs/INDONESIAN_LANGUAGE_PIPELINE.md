@@ -77,6 +77,23 @@ generalization breakthrough. It does not infer meaning from raw text, and the
 legacy input remains supported for compatibility. Uncertain interpretations
 abstain; semantic frames can never authorize game execution.
 
+## Explicit focus for conversational references
+
+The host may provide an optional `focus_entity_id` in the snapshot passed to
+`build_context()`. The context builder carries this pointer into the context
+packet. For follow-up questions, `conversation.py` passes it to
+`resolve_follow_up()`; the ID resolves only if it exists in the current trusted
+reference catalog (`engine_confirmed` or `player_approved`). If an explicit
+focus is supplied but is not trusted/current, the resolver abstains instead of
+guessing from older dialogue mentions. When no focus is supplied, the existing
+most-recent-mention heuristic remains as a compatibility fallback.
+
+The focus ID is only a host-provided reference pointer. It does not prove any
+attribute about the entity; answers still require a unique trusted fact for the
+requested aspect. The host must refresh the focus as the conversation changes.
+This reduces avoidable referent confusion but does not provide general pronoun
+understanding.
+
 ## Recent-turn context retention
 
 The context builder now keeps the **most recent** dialogue turns when applying `max_conversation_turns`, rather than retaining the oldest prefix. This preserves the immediate conversational context needed for short follow-ups such as “yang tadi?”, “kenapa begitu?”, and corrections. The rolling buffer is bounded while input is processed, and a zero-turn budget retains no dialogue. Dialogue remains marked `unverified_dialogue`; recency does not promote a spoken claim into a trusted world fact. This is a context-window correctness improvement, not a language-understanding or generation breakthrough.

@@ -107,6 +107,30 @@ class FollowUpResolutionTests(unittest.TestCase):
         )
         self.assertEqual(result["reference_id"], "npc_bram")
 
+    def test_explicit_host_focus_overrides_latest_text_mention(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarganya?",
+            [
+                {"text": "Aku bertemu Aria."},
+                {"text": "Aku juga mengenal Bram."},
+            ],
+            CATALOG,
+            focus_entity_id="npc_aria",
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["reason"], "explicit_engine_focus_reference")
+
+    def test_untrusted_explicit_focus_does_not_fall_back_to_history(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarganya?",
+            [{"text": "Aku bertemu Bram."}],
+            CATALOG,
+            focus_entity_id="npc_untrusted",
+        )
+        self.assertEqual(result["status"], "unresolved")
+        self.assertEqual(result["reason"], "explicit_focus_not_in_trusted_catalog")
+
     def test_abstains_when_latest_turn_mentions_multiple_references(self):
         result = resolve_follow_up(
             "Bagaimana dengan mereka?",

@@ -92,6 +92,30 @@ class ConversationPipelineTests(unittest.TestCase):
         self.assertEqual(result["text"], "Yang kutahu, Memiliki adik bernama Lio.")
         self.assertEqual(result["fact_response"]["status"], "composed")
 
+    def test_follow_up_uses_explicit_host_focus_instead_of_latest_mention(self):
+        ctx = context(
+            "Bagaimana dengan keluarganya?",
+            conversation_history=[
+                {"speaker": "npc", "text": "Aku bertemu Aria.", "turn": 1},
+                {"speaker": "npc", "text": "Aku juga mengenal Bram.", "turn": 2},
+            ],
+        )
+        ctx["focus_entity_id"] = "npc_aria"
+        catalog = [
+            {"id": "npc_aria", "name": "Aria", "aliases": [], "source": "engine_confirmed"},
+            {"id": "npc_bram", "name": "Bram", "aliases": [], "source": "engine_confirmed"},
+        ]
+        facts = [
+            {"id": "aria_family", "entity_id": "npc_aria", "aspect": "family",
+             "value": "Memiliki adik bernama Lio.", "source": "engine_confirmed"},
+            {"id": "bram_family", "entity_id": "npc_bram", "aspect": "family",
+             "value": "Memiliki kakak bernama Raka.", "source": "engine_confirmed"},
+        ]
+        result = respond_to_context(ctx, PATTERNS, reference_catalog=catalog, entity_facts=facts)
+        self.assertEqual(result["follow_up"]["reference_id"], "npc_aria")
+        self.assertEqual(result["fact_lookup"]["fact"]["id"], "aria_family")
+        self.assertIn("Lio", result["text"])
+
     def test_follow_up_fact_lookup_abstains_for_missing_fact(self):
         history = [{"speaker": "npc", "text": "Aku bertemu Aria.", "turn": 1}]
         catalog = [{"id": "npc_aria", "name": "Aria", "aliases": [], "source": "engine_confirmed"}]
