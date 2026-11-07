@@ -121,6 +121,33 @@ class FollowUpResolutionTests(unittest.TestCase):
         self.assertEqual(result["reference_id"], "npc_aria")
         self.assertEqual(result["reason"], "explicit_engine_focus_reference")
 
+    def test_current_message_entity_name_overrides_older_history_mention(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarga Aria?",
+            [
+                {"text": "Aku bertemu Aria."},
+                {"text": "Aku juga mengenal Bram."},
+            ],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "resolved")
+        self.assertEqual(result["reference_id"], "npc_aria")
+        self.assertEqual(result["reason"], "explicit_entity_mention_in_current_message")
+
+    def test_multiple_entities_named_in_current_follow_up_are_ambiguous(self):
+        result = resolve_follow_up(
+            "Bagaimana dengan keluarga Aria dan Bram?",
+            [{"text": "Aku bertemu Aria."}],
+            CATALOG,
+        )
+        self.assertEqual(result["status"], "ambiguous")
+        self.assertEqual(result["reference_id"], None)
+        self.assertEqual(result["candidates"], ["npc_aria", "npc_bram"])
+        self.assertEqual(
+            result["reason"],
+            "multiple_trusted_references_named_in_current_message",
+        )
+
     def test_untrusted_explicit_focus_does_not_fall_back_to_history(self):
         result = resolve_follow_up(
             "Bagaimana dengan keluarganya?",

@@ -83,9 +83,11 @@ def resolve_follow_up(
 ) -> dict[str, Any]:
     """Resolve a follow-up using an explicit host focus or recent dialogue.
 
-    An explicit focus is accepted only when it matches a trusted catalog entry.
-    An invalid explicit focus causes abstention; when omitted, the conservative
-    recent-mention heuristic is used. This resolves references, not facts/actions.
+    An explicit host focus is accepted only when it matches a trusted catalog entry.
+    Without a host focus, a unique trusted entity named in the current follow-up
+    takes precedence over older dialogue mentions. Multiple named entities cause
+    abstention; only then is the recent-mention heuristic used. This resolves
+    references, not facts/actions.
     """
     if not isinstance(message, str):
         raise FollowUpInputError("message must be a string")
@@ -134,6 +136,27 @@ def resolve_follow_up(
             "candidates": [focus_entity_id], "aspect": aspect,
             "reason": "explicit_engine_focus_reference",
             "reference_source": "trusted_catalog",
+        }
+
+    normalized_message = _normalize(message)
+    current_message_matches = sorted(
+        ref_id
+        for ref_id, terms in entries
+        if any(_contains_phrase(normalized_message, term) for term in terms)
+    )
+    if len(current_message_matches) == 1:
+        reference_id = current_message_matches[0]
+        return {
+            "status": "resolved", "reference_id": reference_id,
+            "candidates": [reference_id], "aspect": aspect,
+            "reason": "explicit_entity_mention_in_current_message",
+            "reference_source": "current_message_explicit_name",
+        }
+    if len(current_message_matches) > 1:
+        return {
+            "status": "ambiguous", "reference_id": None,
+            "candidates": current_message_matches, "aspect": aspect,
+            "reason": "multiple_trusted_references_named_in_current_message",
         }
 
     latest_by_id: dict[str, int] = {}
